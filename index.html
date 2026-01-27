@@ -1,0 +1,3975 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Gioco del Fato</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        /* Smooth scrolling */
+        html {
+            scroll-behavior: smooth;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0a0f;
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(156, 39, 176, 0.2) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(233, 30, 99, 0.2) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(63, 81, 181, 0.15) 0%, transparent 50%);
+            background-attachment: fixed;
+            color: #e8e8e8;
+            min-height: 100vh;
+            min-height: -webkit-fill-available;
+            padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+            overflow-x: hidden;
+            transition: box-shadow 0.3s ease;
+            position: relative;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        /* Rimuovere le stelle animate su mobile - troppo pesante */
+        body::before {
+            display: none;
+        }
+        
+        /* Reduce animations on devices that prefer reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+        
+        body.my-turn {
+            box-shadow: inset 0 0 0 4px #00ff88;
+        }
+        
+        /* Screen Flash Animations */
+        @keyframes damageFlash {
+            0% { background-color: rgba(255, 0, 0, 0); }
+            50% { background-color: rgba(255, 0, 0, 0.3); }
+            100% { background-color: rgba(255, 0, 0, 0); }
+        }
+        
+        @keyframes healFlash {
+            0% { background-color: rgba(78, 204, 163, 0); }
+            50% { background-color: rgba(78, 204, 163, 0.25); }
+            100% { background-color: rgba(78, 204, 163, 0); }
+        }
+        
+        @keyframes reviveFlash {
+            0% { background-color: rgba(255, 215, 0, 0); }
+            25% { background-color: rgba(255, 215, 0, 0.3); }
+            50% { background-color: rgba(78, 204, 163, 0.3); }
+            75% { background-color: rgba(255, 215, 0, 0.3); }
+            100% { background-color: rgba(255, 215, 0, 0); }
+        }
+        
+        .screen-flash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 999;
+        }
+        
+        .screen-flash.damage {
+            animation: damageFlash 0.4s ease-out;
+        }
+        
+        .screen-flash.heal {
+            animation: healFlash 0.5s ease-out;
+        }
+        
+        .screen-flash.revive {
+            animation: reviveFlash 1s ease-out;
+        }
+        
+        /* Particle effects */
+        .particle {
+            position: fixed;
+            pointer-events: none;
+            z-index: 1000;
+            font-size: 2em;
+            animation: particleFloat 1.5s ease-out forwards;
+        }
+        
+        @keyframes particleFloat {
+            0% {
+                opacity: 1;
+                transform: translate(0, 0) scale(1) rotate(0deg);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(var(--tx), var(--ty)) scale(0.3) rotate(360deg);
+            }
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
+            20%, 40%, 60%, 80% { transform: translateX(10px); }
+        }
+        
+        body.shake {
+            animation: shake 0.5s ease;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 15px;
+            position: relative;
+            z-index: 1;
+        }
+
+        h1 {
+            text-align: center;
+            background: linear-gradient(135deg, #ff00ff 0%, #00ffff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 20px;
+            font-size: 2em;
+            font-weight: 900;
+            letter-spacing: 3px;
+            position: relative;
+            filter: drop-shadow(0 0 15px rgba(138, 43, 226, 0.6));
+            text-transform: uppercase;
+        }
+        
+        h1::before {
+            content: '🎲 ';
+        }
+        
+        h1::after {
+            content: ' 🎲';
+        }
+
+        .setup-screen, .game-screen {
+            background: rgba(20, 20, 40, 0.92);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            transition: transform 0.2s ease;
+            position: relative;
+            will-change: transform;
+        }
+        
+        .setup-screen:active,
+        .game-screen:active {
+            transform: scale(0.99);
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #00ffff 0%, #ff00ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+            font-size: 1em;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            filter: drop-shadow(0 0 8px rgba(0, 255, 255, 0.6));
+        }
+
+        input, select {
+            width: 100%;
+            padding: 16px;
+            min-height: 50px;
+            border: 2px solid rgba(0, 255, 255, 0.3);
+            border-radius: 15px;
+            background: rgba(10, 10, 30, 0.9);
+            color: #00ffff;
+            font-size: 16px;
+            transition: all 0.4s ease;
+            box-shadow: 
+                inset 0 2px 8px rgba(0, 0, 0, 0.5),
+                0 0 0 rgba(0, 255, 255, 0);
+            font-weight: 600;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #00ffff;
+            background: rgba(0, 30, 50, 0.95);
+            box-shadow: 
+                inset 0 2px 8px rgba(0, 0, 0, 0.5),
+                0 0 30px rgba(0, 255, 255, 0.6),
+                0 0 60px rgba(0, 255, 255, 0.3);
+            transform: translateY(-2px);
+            color: #fff;
+        }
+        
+        input::placeholder {
+            color: rgba(0, 255, 255, 0.5);
+        }
+
+        button {
+            width: 100%;
+            padding: 18px;
+            min-height: 50px;
+            background: linear-gradient(135deg, #ff00ff 0%, #00ffff 100%);
+            color: #fff;
+            border: none;
+            border-radius: 15px;
+            font-size: 17px;
+            font-weight: 900;
+            cursor: pointer;
+            margin-top: 12px;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+            box-shadow: 0 4px 15px rgba(138, 43, 226, 0.4);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            position: relative;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        button:active {
+            transform: scale(0.97);
+            opacity: 0.9;
+        }
+
+        button:disabled {
+            background: linear-gradient(135deg, #555 0%, #666 100%);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+            opacity: 0.5;
+        }
+
+        .player-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .player-input input {
+            flex: 1;
+        }
+
+        .player-input button {
+            width: auto;
+            padding: 12px 20px;
+            margin: 0;
+            background: #dc3545;
+        }
+
+        #qrcode-container {
+            text-align: center;
+            margin: 20px 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #ffffff 0%, #f5f5f5 100%);
+            border-radius: 15px;
+            box-shadow: 
+                0 8px 25px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.8);
+        }
+
+        #qrcode {
+            display: inline-block;
+            max-width: 100%;
+            height: auto;
+        }
+        
+        #qrcode canvas,
+        #qrcode img {
+            max-width: 100% !important;
+            height: auto !important;
+            width: auto !important;
+        }
+
+        .share-link {
+            margin-top: 20px;
+            padding: 15px;
+            background: linear-gradient(135deg, rgba(30, 30, 45, 0.9) 0%, rgba(20, 20, 35, 0.8) 100%);
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            border-radius: 12px;
+            word-break: break-all;
+            font-size: 14px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .share-link strong {
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .players-list {
+            margin: 20px 0;
+        }
+
+        .player-card {
+            background: linear-gradient(135deg, rgba(40, 20, 60, 0.9) 0%, rgba(20, 10, 40, 0.85) 100%);
+            border-radius: 15px;
+            padding: 18px;
+            margin-bottom: 12px;
+            border: 2px solid rgba(138, 43, 226, 0.3);
+            border-left: 5px solid rgba(138, 43, 226, 0.6);
+            transition: transform 0.2s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            position: relative;
+        }
+        
+        .player-card:active {
+            transform: scale(0.98);
+        }
+
+        .player-card.active-turn {
+            border-left-color: #00ff88;
+            border-left-width: 6px;
+            background: linear-gradient(135deg, rgba(0, 100, 60, 0.3) 0%, rgba(0, 50, 40, 0.25) 100%);
+            box-shadow: 
+                0 4px 20px rgba(0, 255, 136, 0.4),
+                inset 0 0 20px rgba(0, 255, 136, 0.15);
+        }
+
+        .player-card.eliminated {
+            opacity: 0.5;
+            border-left-color: #dc3545;
+        }
+
+        .player-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .player-name {
+            font-weight: 800;
+            font-size: 1.2em;
+            background: linear-gradient(135deg, #00ffff 0%, #ff00ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 0.5px;
+            filter: drop-shadow(0 0 8px rgba(0, 255, 255, 0.5));
+            word-wrap: break-word;
+            line-height: 1.3;
+            margin-bottom: 8px;
+        }
+
+        .player-hp {
+            font-size: 1.8em;
+            font-weight: 900;
+            color: #00ff88;
+            text-shadow: 0 0 20px rgba(0, 255, 136, 0.8), 0 0 40px rgba(0, 255, 136, 0.4);
+            letter-spacing: 1px;
+        }
+
+        .player-hp.low {
+            color: #ff0066;
+            text-shadow: 0 0 20px rgba(255, 0, 102, 0.8), 0 0 40px rgba(255, 0, 102, 0.4);
+            animation: warning-pulse 1s infinite;
+        }
+        
+        @keyframes warning-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .dice-calculator {
+            background: linear-gradient(135deg, rgba(30, 30, 45, 0.8) 0%, rgba(20, 20, 35, 0.7) 100%);
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            box-shadow: 
+                0 8px 25px rgba(0, 0, 0, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .dice-inputs {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+
+        .dice-input {
+            flex: 1;
+            min-width: 60px;
+        }
+
+        .dice-input input {
+            text-align: center;
+            font-size: 2em;
+            font-weight: 900;
+            background: linear-gradient(135deg, rgba(10, 10, 40, 0.95) 0%, rgba(30, 10, 60, 0.9) 100%);
+            border: 3px solid rgba(0, 255, 255, 0.5);
+            border-radius: 15px;
+            color: #00ffff;
+            text-shadow: 0 0 15px rgba(0, 255, 255, 0.8);
+            box-shadow: 
+                0 4px 15px rgba(0, 0, 0, 0.5),
+                inset 0 2px 8px rgba(0, 0, 0, 0.6),
+                0 0 20px rgba(0, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .dice-input input:focus {
+            border-color: #ff00ff;
+            background: linear-gradient(135deg, rgba(30, 10, 60, 1) 0%, rgba(60, 10, 80, 0.95) 100%);
+            color: #ff00ff;
+            text-shadow: 0 0 20px rgba(255, 0, 255, 1);
+            box-shadow: 
+                0 6px 20px rgba(255, 0, 255, 0.4),
+                inset 0 2px 8px rgba(0, 0, 0, 0.6),
+                0 0 40px rgba(255, 0, 255, 0.4);
+            transform: scale(1.1) rotate(2deg);
+        }
+
+        .result-display {
+            background: linear-gradient(135deg, rgba(138, 43, 226, 0.25) 0%, rgba(75, 0, 130, 0.15) 100%);
+            border: 3px solid #ff00ff;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 15px 0;
+            text-align: center;
+            box-shadow: 0 0 25px rgba(255, 0, 255, 0.3);
+            position: relative;
+        }
+
+        .result-display h3 {
+            background: linear-gradient(135deg, #ff00ff 0%, #00ffff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
+            font-size: 1.4em;
+            font-weight: 900;
+            filter: drop-shadow(0 0 8px rgba(255, 0, 255, 0.5));
+            position: relative;
+            z-index: 1;
+        }
+
+        .history {
+            max-height: 250px;
+            overflow-y: auto;
+            background: rgba(10, 10, 20, 0.8);
+            border: 2px solid rgba(255, 215, 0, 0.2);
+            border-radius: 12px;
+            padding: 15px 15px 15px 25px;
+            margin: 15px 0;
+            box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+        
+        .history::before {
+            content: '';
+            position: absolute;
+            left: 10px;
+            top: 15px;
+            bottom: 15px;
+            width: 2px;
+            background: linear-gradient(180deg, rgba(255, 215, 0, 0.3) 0%, rgba(255, 215, 0, 0.1) 100%);
+        }
+
+        .history-item {
+            padding: 12px 12px 12px 20px;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, rgba(30, 30, 45, 0.6) 0%, rgba(20, 20, 35, 0.5) 100%);
+            border-left: 3px solid rgba(255, 215, 0, 0.4);
+            border-radius: 8px;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .history-item::before {
+            content: '';
+            position: absolute;
+            left: -18px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 8px;
+            height: 8px;
+            background: #ffd700;
+            border-radius: 50%;
+            border: 2px solid rgba(10, 10, 20, 0.8);
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+        
+        .history-item .icon {
+            font-size: 1.2em;
+            min-width: 25px;
+            text-align: center;
+        }
+        
+        .history-item.damage {
+            border-left-color: #ff6b6b;
+        }
+        
+        .history-item.damage::before {
+            background: #ff6b6b;
+            box-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+        }
+        
+        .history-item.heal {
+            border-left-color: #4ecca3;
+        }
+        
+        .history-item.heal::before {
+            background: #4ecca3;
+            box-shadow: 0 0 10px rgba(78, 204, 163, 0.5);
+        }
+        
+        .history-item.special {
+            border-left-color: #ffd700;
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 237, 78, 0.1) 100%);
+        }
+        
+        .history-item:hover {
+            background: linear-gradient(135deg, rgba(40, 40, 55, 0.7) 0%, rgba(30, 30, 45, 0.6) 100%);
+            border-left-color: #ffd700;
+            transform: translateX(3px);
+        }
+
+        .timer {
+            text-align: center;
+            font-size: 1.3em;
+            font-weight: 800;
+            background: linear-gradient(135deg, rgba(138, 43, 226, 0.3) 0%, rgba(75, 0, 130, 0.2) 100%);
+            border: 2px solid rgba(138, 43, 226, 0.5);
+            border-radius: 15px;
+            padding: 12px 20px;
+            margin: 15px 0;
+            color: #ff00ff;
+            text-shadow: 0 0 15px rgba(255, 0, 255, 0.6);
+            box-shadow: 
+                0 0 20px rgba(138, 43, 226, 0.3),
+                inset 0 0 15px rgba(138, 43, 226, 0.1);
+            letter-spacing: 2px;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .master-controls {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.08) 0%, rgba(255, 237, 78, 0.05) 100%);
+            border: 2px solid rgba(255, 215, 0, 0.4);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 
+                0 8px 25px rgba(255, 215, 0, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .master-controls h3 {
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 18px;
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .control-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .control-group button {
+            padding: 10px;
+            font-size: 14px;
+        }
+
+        .hp-modifier {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin: 10px 0;
+        }
+
+        .hp-modifier input {
+            width: 100%;
+            font-size: 22px !important;
+            padding: 20px !important;
+            min-height: 65px !important;
+            border: 3px solid rgba(0, 255, 255, 0.5) !important;
+            background: rgba(10, 10, 30, 0.95) !important;
+            color: #00ffff !important;
+            border-radius: 12px !important;
+            text-align: center;
+            font-weight: bold;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        
+        .hp-modifier input:focus {
+            outline: none;
+            border-color: #ff00ff !important;
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.5);
+        }
+
+        .hp-modifier button {
+            width: 100%;
+            padding: 16px 15px;
+            margin: 0;
+            min-height: 55px;
+            font-size: 16px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .leaderboard {
+            background: linear-gradient(135deg, rgba(30, 30, 45, 0.8) 0%, rgba(20, 20, 35, 0.7) 100%);
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 15px 0;
+            box-shadow: 
+                0 8px 25px rgba(0, 0, 0, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .leaderboard h3 {
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: 700;
+        }
+
+        .leaderboard-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, rgba(30, 30, 45, 0.6) 0%, rgba(20, 20, 35, 0.5) 100%);
+            border-left: 3px solid rgba(100, 100, 150, 0.5);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .leaderboard-item:hover {
+            background: linear-gradient(135deg, rgba(40, 40, 55, 0.7) 0%, rgba(30, 30, 45, 0.6) 100%);
+            transform: translateX(5px);
+        }
+
+        .leaderboard-item.winner {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 237, 78, 0.15) 100%);
+            border: 3px solid #ffd700;
+            border-left: 5px solid #ffd700;
+            box-shadow: 
+                0 0 25px rgba(255, 215, 0, 0.4),
+                inset 0 0 15px rgba(255, 215, 0, 0.1);
+            font-weight: 700;
+        }
+
+        @keyframes damage {
+            0%, 100% { transform: translateX(0) rotate(0deg); }
+            15% { transform: translateX(-15px) rotate(-5deg); }
+            30% { transform: translateX(15px) rotate(5deg); }
+            45% { transform: translateX(-10px) rotate(-3deg); }
+            60% { transform: translateX(10px) rotate(3deg); }
+            75% { transform: translateX(-5px) rotate(-1deg); }
+        }
+
+        @keyframes heal {
+            0%, 100% { transform: scale(1); }
+            25% { transform: scale(1.15) rotate(3deg); }
+            50% { transform: scale(1.08) rotate(-3deg); }
+            75% { transform: scale(1.12) rotate(2deg); }
+        }
+
+        @keyframes immortal-pulse {
+            0%, 100% { 
+                transform: scale(1);
+                box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+            }
+            50% { 
+                transform: scale(1.05);
+                box-shadow: 0 0 40px rgba(255, 215, 0, 0.9), 0 0 60px rgba(255, 215, 0, 0.5);
+            }
+        }
+        
+        @keyframes multiplier-glow {
+            0%, 100% { 
+                box-shadow: 0 0 15px rgba(255, 0, 255, 0.4);
+            }
+            50% { 
+                box-shadow: 0 0 30px rgba(255, 0, 255, 0.8), 0 0 50px rgba(255, 0, 255, 0.4);
+            }
+        }
+        
+        @keyframes conversion-sparkle {
+            0%, 100% { 
+                box-shadow: 0 0 20px rgba(255, 105, 180, 0.5);
+                transform: scale(1) rotate(0deg);
+            }
+            33% { 
+                box-shadow: 0 0 40px rgba(255, 105, 180, 0.9), 0 0 60px rgba(255, 105, 180, 0.5);
+                transform: scale(1.08) rotate(5deg);
+            }
+            66% { 
+                box-shadow: 0 0 35px rgba(255, 105, 180, 0.8);
+                transform: scale(1.04) rotate(-3deg);
+            }
+        }
+        
+        @keyframes armor-shine {
+            0%, 100% { 
+                box-shadow: 0 0 15px rgba(255, 165, 0, 0.4);
+            }
+            50% { 
+                box-shadow: 0 0 35px rgba(255, 215, 0, 0.9), 0 0 50px rgba(255, 140, 0, 0.6);
+            }
+        }
+        
+        @keyframes kraken-pulse {
+            0%, 100% { 
+                box-shadow: 0 0 20px rgba(153, 51, 255, 0.6);
+                border-left-color: rgba(153, 51, 255, 0.8);
+            }
+            50% { 
+                box-shadow: 0 0 40px rgba(153, 51, 255, 1), 0 0 60px rgba(153, 51, 255, 0.6);
+                border-left-color: rgba(153, 51, 255, 1);
+            }
+        }
+        
+        @keyframes checkmate-danger {
+            0%, 100% { 
+                box-shadow: 0 0 20px rgba(255, 0, 0, 0.6);
+                border-left-color: rgba(255, 0, 0, 0.8);
+            }
+            50% { 
+                box-shadow: 0 0 40px rgba(255, 0, 0, 1), 0 0 60px rgba(255, 0, 0, 0.6);
+                border-left-color: rgba(255, 0, 0, 1);
+            }
+        }
+
+        .animate-damage {
+            animation: damage 0.6s ease;
+        }
+
+        .animate-heal {
+            animation: heal 0.8s ease;
+        }
+        
+        .animate-immortal {
+            animation: immortal-pulse 1.5s ease-in-out;
+        }
+        
+        .animate-multiplier {
+            animation: multiplier-glow 1.2s ease-in-out;
+        }
+        
+        .animate-conversion {
+            animation: conversion-sparkle 1s ease-in-out;
+        }
+        
+        .animate-armor {
+            animation: armor-shine 1.2s ease-in-out;
+        }
+        
+        .animate-kraken {
+            animation: kraken-pulse 1s ease-in-out;
+        }
+        
+        .animate-checkmate {
+            animation: checkmate-danger 1s ease-in-out;
+        }
+
+        .floating-number {
+            position: fixed;
+            font-size: 3em;
+            font-weight: 900;
+            pointer-events: none;
+            animation: float-up 1.2s ease-out forwards;
+            z-index: 1000;
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.8), 0 0 20px currentColor;
+        }
+
+        .floating-number.damage {
+            color: #ff6b6b;
+        }
+
+        .floating-number.heal {
+            color: #4ecca3;
+        }
+        
+        .floating-number.immortal {
+            color: #ffd700;
+        }
+        
+        .floating-number.multiplier {
+            color: #ff00ff;
+        }
+        
+        .floating-number.conversion {
+            color: #ff69b4;
+        }
+
+        @keyframes float-up {
+            0% { 
+                opacity: 1; 
+                transform: translateY(0) scale(1); 
+            }
+            20% {
+                transform: translateY(-30px) scale(1.2);
+            }
+            100% { 
+                opacity: 0; 
+                transform: translateY(-120px) scale(0.8); 
+            }
+        }
+        
+        /* Effetto icona che appare */
+        @keyframes icon-appear {
+            0% {
+                opacity: 0;
+                transform: scale(0) rotate(-180deg);
+            }
+            60% {
+                transform: scale(1.3) rotate(10deg);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) rotate(0deg);
+            }
+        }
+        
+        .effect-icon-appear {
+            animation: icon-appear 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+
+        .direction-indicator {
+            text-align: center;
+            padding: 12px;
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.12) 0%, rgba(255, 237, 78, 0.08) 100%);
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            border-radius: 12px;
+            margin: 10px 0;
+            font-weight: 700;
+            font-size: 1.05em;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.1);
+        }
+        
+        /* QR Code Modal */
+        .qr-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 3000;
+            padding: 20px;
+        }
+        
+        .qr-modal.show {
+            display: flex;
+        }
+        
+        .qr-modal-content {
+            background: linear-gradient(135deg, #ffffff 0%, #f5f5f5 100%);
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 90%;
+            max-height: 90%;
+            overflow-y: auto;
+            box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            position: relative;
+        }
+        
+        .qr-modal-content h2 {
+            color: #1a1a2e;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+        
+        .qr-modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 40px;
+            height: 40px;
+            background: #ff0066;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s ease;
+        }
+        
+        .qr-modal-close:active {
+            transform: scale(0.9);
+        }
+        
+        .qr-modal #qrcode-modal {
+            display: inline-block;
+            margin: 20px 0;
+        }
+        
+        .qr-modal .share-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(138, 43, 226, 0.1);
+            border: 2px solid rgba(138, 43, 226, 0.3);
+            border-radius: 12px;
+            color: #1a1a2e;
+            font-weight: 600;
+        }
+        
+        .qr-modal .game-code {
+            font-size: 1.5em;
+            color: #ff00ff;
+            font-weight: 900;
+            margin: 10px 0;
+            letter-spacing: 2px;
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+            }
+            
+            /* Fix per iOS - evita elementi che spariscono durante scroll */
+            .player-card,
+            .setup-screen,
+            .game-screen,
+            button,
+            input,
+            select {
+                -webkit-transform: translate3d(0, 0, 0);
+                transform: translate3d(0, 0, 0);
+                backface-visibility: hidden;
+                -webkit-backface-visibility: hidden;
+            }
+            
+            .container {
+                padding: 8px;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            h1 { 
+                font-size: 1.6em;
+                letter-spacing: 2px;
+                margin-bottom: 15px;
+            }
+            
+            h1::before,
+            h1::after {
+                font-size: 0.8em;
+            }
+            
+            .setup-screen, .game-screen {
+                padding: 18px 15px;
+                border-radius: 18px;
+            }
+            
+            label {
+                font-size: 0.9em;
+                margin-bottom: 6px;
+            }
+            
+            input, select {
+                padding: 14px 12px;
+                font-size: 16px;
+                border-radius: 12px;
+            }
+            
+            button {
+                padding: 16px 14px;
+                font-size: 15px;
+                letter-spacing: 1.5px;
+                margin-top: 10px;
+            }
+            
+            .player-card { 
+                padding: 14px 12px;
+                margin-bottom: 10px;
+                border-radius: 12px;
+            }
+            
+            .player-name {
+                font-size: 1.1em !important;
+            }
+            
+            .player-hp {
+                font-size: 1.5em !important;
+            }
+            
+            .dice-inputs { 
+                gap: 8px;
+                justify-content: center;
+            }
+            
+            .dice-input {
+                min-width: 70px;
+                flex: 0 1 70px;
+            }
+            
+            .dice-input input {
+                font-size: 1.6em;
+                padding: 12px 8px;
+                height: 70px;
+            }
+            
+            .control-group { 
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            
+            .winner-notification {
+                padding: 30px 20px;
+                min-width: 280px;
+            }
+            
+            .winner-notification h2 {
+                font-size: 1.8em;
+            }
+            
+            .eliminated-notification {
+                padding: 30px 20px;
+                min-width: 280px;
+            }
+            
+            .eliminated-notification h2 {
+                font-size: 2em;
+            }
+            
+            .result-display {
+                padding: 16px 12px;
+                border-radius: 12px;
+            }
+            
+            .result-display h3 {
+                font-size: 1.15em;
+            }
+            
+            .dice-result {
+                width: 40px;
+                height: 40px;
+                line-height: 40px;
+                font-size: 20px;
+                margin: 0 3px;
+            }
+            
+            .history {
+                max-height: 200px;
+                padding: 12px 12px 12px 20px;
+                margin: 12px 0;
+            }
+            
+            .history-item {
+                padding: 10px 10px 10px 15px;
+                margin-bottom: 8px;
+                font-size: 0.85em;
+            }
+            
+            .timer {
+                font-size: 1.1em;
+                padding: 10px 15px;
+                margin: 12px 0;
+            }
+            
+            .direction-indicator {
+                padding: 10px;
+                font-size: 0.95em;
+                margin: 8px 0;
+            }
+            
+            #current-turn {
+                font-size: 1.05em;
+                margin: 12px 0;
+            }
+            
+            .dice-calculator h3 {
+                font-size: 1.1em;
+                margin-bottom: 12px;
+            }
+            
+            .master-controls h3 {
+                font-size: 1.1em;
+            }
+            
+            .qrcode-container {
+                padding: 20px;
+            }
+            
+            #qrcode canvas {
+                max-width: 100%;
+                height: auto !important;
+                width: auto !important;
+            }
+            
+            /* Miglioramenti touch per mobile */
+            button,
+            input,
+            select,
+            .dice-input input {
+                touch-action: manipulation;
+            }
+            
+            /* Testo più leggibile */
+            .player-card,
+            .history-item,
+            .result-display {
+                line-height: 1.5;
+            }
+        }
+        
+        /* Extra small devices */
+        @media (max-width: 360px) {
+            h1 {
+                font-size: 1.5em;
+            }
+            
+            .dice-input {
+                min-width: 60px;
+                flex: 0 1 60px;
+            }
+            
+            .dice-input input {
+                font-size: 1.4em;
+                height: 60px;
+            }
+            
+            button {
+                font-size: 14px;
+                padding: 14px 12px;
+            }
+        }
+        
+        /* Landscape mode on mobile */
+        @media (max-height: 500px) and (orientation: landscape) {
+            .container {
+                padding: 5px;
+            }
+            
+            h1 {
+                font-size: 1.3em;
+                margin-bottom: 8px;
+            }
+            
+            .setup-screen, .game-screen {
+                padding: 12px;
+            }
+            
+            .player-card {
+                padding: 10px;
+                margin-bottom: 8px;
+            }
+            
+            input, select, button {
+                padding: 10px;
+            }
+        }
+
+        /* Eliminated Notification */
+        .eliminated-notification {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.98) 0%, rgba(50, 0, 0, 0.98) 100%);
+            border: 4px solid #ff0000;
+            border-radius: 20px;
+            padding: 40px 30px;
+            text-align: center;
+            z-index: 2001;
+            box-shadow: 
+                0 0 60px rgba(255, 0, 0, 0.9),
+                inset 0 0 40px rgba(255, 0, 0, 0.3);
+            min-width: 300px;
+            max-width: 90%;
+        }
+
+        .eliminated-notification.show {
+            animation: eliminatedAppear 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+        }
+
+        .eliminated-notification h2 {
+            font-size: 2.5em;
+            color: #ff0000;
+            text-shadow: 0 0 30px rgba(255, 0, 0, 1);
+            margin-bottom: 20px;
+            font-weight: 900;
+        }
+
+        /* Winner Notification */
+        .winner-notification {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.98) 0%, rgba(255, 237, 78, 0.98) 100%);
+            border: 5px solid #ffd700;
+            border-radius: 25px;
+            padding: 50px 40px;
+            text-align: center;
+            z-index: 2001;
+            box-shadow: 
+                0 0 80px rgba(255, 215, 0, 1),
+                inset 0 0 50px rgba(255, 255, 255, 0.3);
+            min-width: 320px;
+            max-width: 90%;
+        }
+
+        .winner-notification.show {
+            animation: winnerAppear 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+        }
+
+        .winner-notification h2 {
+            font-size: 2.8em;
+            color: #1a1a2e;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+            margin-bottom: 20px;
+            font-weight: 900;
+        }
+
+        .winner-notification .winner-name {
+            font-size: 2.2em;
+            color: #1a1a2e;
+            margin: 20px 0;
+            font-weight: 900;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        .game-stats {
+            background: rgba(20, 20, 30, 0.9);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 25px;
+            text-align: left;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .game-stats h3 {
+            color: #ffd700;
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            margin: 8px 0;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            border-left: 3px solid #ffd700;
+        }
+        
+        .stat-item .label {
+            color: #e8e8e8;
+            font-weight: 600;
+        }
+        
+        .stat-item .value {
+            color: #4ecca3;
+            font-weight: 700;
+        }
+
+        .hit-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 1999;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .hit-overlay.show {
+            opacity: 1;
+        }
+
+        .hit-overlay.show {
+            opacity: 1;
+        }
+
+        @keyframes eliminatedAppear {
+            0% {
+                transform: translate(-50%, -50%) scale(0) rotate(-180deg);
+                opacity: 0;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(1) rotate(0deg);
+                opacity: 1;
+            }
+        }
+
+        @keyframes winnerAppear {
+            0% {
+                transform: translate(-50%, -50%) scale(0) rotate(180deg);
+                opacity: 0;
+            }
+            50% {
+                transform: translate(-50%, -50%) scale(1.2) rotate(-10deg);
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(1) rotate(0deg);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎲 Gioco del Fato 🎲</h1>
+
+        <!-- Setup Screen -->
+        <div id="setup-screen" class="setup-screen">
+            <!-- Auto role detection, no manual selection needed -->
+            
+            <!-- Master Setup -->
+            <div id="master-setup" class="hidden">
+                <div class="input-group">
+                    <label>Il tuo nome (Master)</label>
+                    <input type="text" id="master-name" placeholder="Inserisci il tuo nome">
+                </div>
+                <div class="input-group">
+                    <label>Numero di giocatori (incluso te)</label>
+                    <input type="number" id="num-players" min="2" max="18" value="4">
+                </div>
+                <div class="input-group">
+                    <label>HP iniziali</label>
+                    <input type="number" id="initial-hp" value="70">
+                </div>
+                <div id="player-names-container"></div>
+                <button id="create-game-btn">Crea Partita</button>
+            </div>
+
+            <!-- Player Join -->
+            <div id="player-join" class="hidden">
+                <div class="input-group">
+                    <label>Seleziona il tuo nome</label>
+                    <select id="player-name-select">
+                        <option value="">Caricamento...</option>
+                    </select>
+                </div>
+                <button id="join-game-btn">Unisciti alla Partita</button>
+                
+                <div style="margin-top: 20px; text-align: center; color: #888; font-size: 0.9em;">
+                    Codice Partita: <strong id="display-game-code" style="color: #ffd700;"></strong>
+                </div>
+            </div>
+
+            <!-- QR Code Display -->
+            <div id="qr-display" class="hidden">
+                <h3 style="color: #ffd700; text-align: center;">Partita Creata!</h3>
+                <div id="qrcode-container">
+                    <div id="qrcode"></div>
+                </div>
+                <div class="share-link">
+                    <strong>Codice Partita:</strong><br>
+                    <span id="game-code-display"></span>
+                </div>
+                <div style="margin-top: 15px; padding: 15px; background: rgba(78, 204, 163, 0.1); border: 2px solid rgba(78, 204, 163, 0.3); border-radius: 10px;">
+                    <div style="color: #4ecca3; font-weight: bold; margin-bottom: 8px;">👥 Giocatori Connessi:</div>
+                    <div id="connected-players-list"></div>
+                </div>
+                <button id="start-game-btn">Inizia Partita</button>
+            </div>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen" class="game-screen hidden">
+            <div class="timer" id="timer">Tempo: 00:00</div>
+            
+            <div class="direction-indicator" id="direction">
+                Direzione: ⭮ Oraria
+            </div>
+
+            <div id="current-turn" style="text-align: center; font-size: 1.2em; color: #ffd700; margin: 15px 0;">
+                Turno di: <strong id="turn-player"></strong>
+            </div>
+
+            <!-- Dice Calculator -->
+            <div class="dice-calculator" id="dice-calculator">
+                <h3 style="color: #ffd700; text-align: center;">Calcolatore Dadi</h3>
+                <div class="dice-inputs" id="dice-inputs"></div>
+                <button id="calculate-btn">Calcola e Applica</button>
+                <div class="result-display hidden" id="result-display">
+                    <h3>Risultato</h3>
+                    <div id="result-text"></div>
+                </div>
+            </div>
+
+            <!-- Players List -->
+            <div class="players-list" id="players-list"></div>
+
+            <!-- Leaderboard -->
+            <div class="leaderboard">
+                <h3>📊 Classifica</h3>
+                <div id="leaderboard-list"></div>
+            </div>
+
+            <!-- History -->
+            <div class="history" id="history"></div>
+
+            <!-- Master Controls -->
+            <div id="master-controls" class="master-controls hidden">
+                <h3>👑 Controlli Master</h3>
+                
+                <div class="control-group">
+                    <button id="reverse-direction-btn">🔄 Inverti Direzione</button>
+                    <button id="rollback-btn">↩️ Annulla Ultima</button>
+                </div>
+                
+                <div class="input-group">
+                    <label>Mostra QR Code per Rientro</label>
+                    <select id="qr-player-select"></select>
+                    <button id="show-qr-btn">📱 Mostra QR Code</button>
+                </div>
+                
+                <div class="input-group">
+                    <label>Immortalità (seleziona uno o più giocatori - Ctrl/Cmd per multipli)</label>
+                    <select id="immortal-players" multiple size="5"></select>
+                    <button id="toggle-immortality-btn">⭐ Attiva/Disattiva Immortalità</button>
+                </div>
+                
+                <div class="input-group">
+                    <label>Moltiplicatore Danni/Cure (seleziona uno o più giocatori)</label>
+                    <select id="multiplier-players" multiple size="5"></select>
+                    <div class="hp-modifier">
+                        <button id="set-multiplier-half-btn" style="background: linear-gradient(135deg, #1a4d1a 0%, #2d7a2d 100%);">🛡️ Metà Danni (x0.5)</button>
+                        <button id="set-multiplier-double-btn" style="background: linear-gradient(135deg, #4d1a1a 0%, #7a2d2d 100%);">⚔️ Danni Doppi (x2)</button>
+                        <button id="remove-multiplier-btn" style="background: #dc3545;">❌ Rimuovi</button>
+                    </div>
+                    <div style="font-size: 0.85em; color: #aaa; margin-top: 8px; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                        💡 Il moltiplicatore dura fino al prossimo turno di chi lo ha applicato
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label>Salta Turno (seleziona uno o più giocatori)</label>
+                    <select id="skip-turn-players" multiple size="5"></select>
+                    <button id="toggle-skip-turn-btn">⏭️ Attiva/Disattiva Salta Turno</button>
+                </div>
+                
+                <div class="input-group">
+                    <label>Marchio del Kraken 🐙 (seleziona uno o più giocatori)</label>
+                    <select id="kraken-mark-players" multiple size="5"></select>
+                    <button id="toggle-kraken-mark-btn" style="background: linear-gradient(135deg, #1a0033 0%, #330066 100%); border: 2px solid #9933ff;">🐙 Attiva/Disattiva Marchio</button>
+                    <div style="font-size: 0.85em; color: #ff6b6b; margin-top: 8px; padding: 8px; background: rgba(255,0,0,0.1); border-radius: 8px; border: 1px solid rgba(255,0,0,0.3);">
+                        ⚠️ <strong>Effetto permanente:</strong> Eliminazione automatica a 10 HP o meno
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label>Scacco Matto ♟️ (seleziona uno o più giocatori)</label>
+                    <select id="checkmate-players" multiple size="5"></select>
+                    <div class="hp-modifier">
+                        <input type="number" id="checkmate-value" placeholder="HP di eliminazione" min="1" max="100" value="30">
+                        <button id="set-checkmate-btn" style="background: linear-gradient(135deg, #1a0033 0%, #4d0000 100%); border: 2px solid #ff3333;">♟️ Imposta Scacco Matto</button>
+                        <button id="remove-checkmate-btn" style="background: #dc3545;">❌ Rimuovi</button>
+                    </div>
+                    <div style="font-size: 0.85em; color: #ff6b6b; margin-top: 8px; padding: 8px; background: rgba(255,0,0,0.1); border-radius: 8px; border: 1px solid rgba(255,0,0,0.3);">
+                        ⚠️ <strong>Effetto permanente:</strong> Eliminazione automatica al valore HP specificato
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label>Conversione Danni → Cure 💫 (seleziona uno o più giocatori)</label>
+                    <select id="damage-to-heal-players" multiple size="5"></select>
+                    <button id="toggle-damage-to-heal-btn" style="background: linear-gradient(135deg, #ff1493 0%, #ff69b4 100%);">💫 Attiva/Disattiva Conversione</button>
+                    <div style="font-size: 0.85em; color: #ff69b4; margin-top: 8px; padding: 8px; background: rgba(255,20,147,0.1); border-radius: 8px;">
+                        💡 Dura 1 turno - I danni subiti diventano cure
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label>Armatura del Sole ☀️ (seleziona uno o più giocatori)</label>
+                    <select id="sun-armor-players" multiple size="5"></select>
+                    <button id="toggle-sun-armor-btn" style="background: linear-gradient(135deg, #ff8c00 0%, #ffd700 100%);">☀️ Attiva/Disattiva Armatura Sole</button>
+                    <div style="font-size: 0.85em; color: #ffa500; margin-top: 8px; padding: 8px; background: rgba(255,140,0,0.1); border-radius: 8px;">
+                        💡 Dura 1 turno - Danni dispari diventano cure
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label>Armatura della Luna 🌙 (seleziona uno o più giocatori)</label>
+                    <select id="moon-armor-players" multiple size="5"></select>
+                    <button id="toggle-moon-armor-btn" style="background: linear-gradient(135deg, #191970 0%, #4169e1 100%);">🌙 Attiva/Disattiva Armatura Luna</button>
+                    <div style="font-size: 0.85em; color: #87ceeb; margin-top: 8px; padding: 8px; background: rgba(25,25,112,0.2); border-radius: 8px;">
+                        💡 Dura 1 turno - Danni pari diventano cure
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label>Dadi Personalizzati (seleziona uno o più giocatori)</label>
+                    <select id="custom-dice-players" multiple size="5"></select>
+                    <div class="hp-modifier">
+                        <input type="number" id="custom-dice-value" placeholder="Numero dadi (1-6)" min="1" max="6" value="3">
+                        <button id="set-custom-dice-btn">🎲 Imposta Dadi</button>
+                        <button id="remove-custom-dice-btn" style="background: #dc3545;">❌ Rimuovi</button>
+                    </div>
+                    <div style="font-size: 0.85em; color: #aaa; margin-top: 8px; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                        💡 I dadi personalizzati durano solo per il prossimo turno del giocatore
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>Cambia Turno</label>
+                    <select id="next-turn-player"></select>
+                    <button id="change-turn-btn">⏭️ Cambia Turno</button>
+                </div>
+
+                <div class="input-group">
+                    <label>Modifica HP Giocatori (tieni premuto Ctrl/Cmd per selezionare multipli)</label>
+                    <select id="target-players" multiple size="5"></select>
+                    <div class="hp-modifier">
+                        <input type="number" id="hp-amount" placeholder="Valore HP">
+                        <button id="damage-btn">💥 Danno</button>
+                        <button id="heal-btn">💚 Cura</button>
+                    </div>
+                </div>
+
+                <button id="revive-btn">🔄 Rianimazione</button>
+                
+                <div class="input-group" style="margin-top: 15px;">
+                    <label>Scambia HP tra Giocatori</label>
+                    <select id="swap-player-1"></select>
+                    <select id="swap-player-2" style="margin-top: 10px;"></select>
+                    <button id="swap-hp-btn">🔄 Scambia HP</button>
+                </div>
+                
+                <button id="end-game-btn" style="background: #dc3545;">🏁 Termina Partita</button>
+                <button id="new-game-btn" style="background: linear-gradient(135deg, #4ecca3 0%, #3ab795 100%);">🎮 Nuova Partita</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR Code Modal -->
+    <div id="qr-modal" class="qr-modal">
+        <div class="qr-modal-content">
+            <button class="qr-modal-close" id="qr-modal-close">×</button>
+            <h2>📱 QR Code Partita</h2>
+            <div id="qrcode-modal"></div>
+            <div class="share-info">
+                <p><strong>Codice Partita:</strong></p>
+                <div class="game-code" id="modal-game-code"></div>
+                <p style="margin-top: 10px; font-size: 0.9em;">Scansiona il QR code o inserisci il codice per entrare</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+  apiKey: "AIzaSyAv1tYe2jwc3abq128Ci5PvJK1HTTuF3tY",
+  authDomain: "gioco-del-fato.firebaseapp.com",
+  databaseURL: "https://gioco-del-fato-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "gioco-del-fato",
+  storageBucket: "gioco-del-fato.firebasestorage.app",
+  messagingSenderId: "358068623557",
+  appId: "1:358068623557:web:dad9bbba9da419e186f8ac"
+};
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        let gameState = {
+            gameCode: null,
+            isMaster: false,
+            playerName: null,
+            currentTurn: 0,
+            direction: 'clockwise',
+            diceCount: 3,
+            players: [],
+            history: [],
+            startTime: null,
+            initialHP: 70,
+            stats: {}, // Track game statistics
+            previousState: null // For rollback
+        };
+
+        let timerInterval = null;
+
+        // Setup Event Listeners
+        document.getElementById('num-players').addEventListener('change', generatePlayerNameInputs);
+
+        document.getElementById('create-game-btn').addEventListener('click', createGame);
+        document.getElementById('join-game-btn').addEventListener('click', joinGame);
+        document.getElementById('start-game-btn').addEventListener('click', startGame);
+        document.getElementById('calculate-btn').addEventListener('click', calculateDice);
+        
+        // Master Controls
+        document.getElementById('reverse-direction-btn')?.addEventListener('click', reverseDirection);
+        document.getElementById('rollback-btn')?.addEventListener('click', rollbackLastTurn);
+        document.getElementById('change-turn-btn')?.addEventListener('click', changeTurn);
+        document.getElementById('damage-btn')?.addEventListener('click', () => modifyHP('damage'));
+        document.getElementById('heal-btn')?.addEventListener('click', () => modifyHP('heal'));
+        document.getElementById('revive-btn')?.addEventListener('click', revivePlayer);
+        document.getElementById('swap-hp-btn')?.addEventListener('click', swapHP);
+        document.getElementById('end-game-btn')?.addEventListener('click', endGame);
+        document.getElementById('new-game-btn')?.addEventListener('click', newGame);
+        document.getElementById('show-qr-btn')?.addEventListener('click', showQRModal);
+        document.getElementById('qr-modal-close')?.addEventListener('click', closeQRModal);
+        document.getElementById('toggle-immortality-btn')?.addEventListener('click', toggleImmortality);
+        document.getElementById('set-multiplier-half-btn')?.addEventListener('click', () => setMultiplier(0.5));
+        document.getElementById('set-multiplier-double-btn')?.addEventListener('click', () => setMultiplier(2));
+        document.getElementById('remove-multiplier-btn')?.addEventListener('click', removeMultiplier);
+        document.getElementById('toggle-skip-turn-btn')?.addEventListener('click', toggleSkipTurn);
+        document.getElementById('set-custom-dice-btn')?.addEventListener('click', setCustomDice);
+        document.getElementById('remove-custom-dice-btn')?.addEventListener('click', removeCustomDice);
+        document.getElementById('toggle-kraken-mark-btn')?.addEventListener('click', toggleKrakenMark);
+        document.getElementById('set-checkmate-btn')?.addEventListener('click', setCheckmate);
+        document.getElementById('remove-checkmate-btn')?.addEventListener('click', removeCheckmate);
+        document.getElementById('toggle-damage-to-heal-btn')?.addEventListener('click', toggleDamageToHeal);
+        document.getElementById('toggle-sun-armor-btn')?.addEventListener('click', toggleSunArmor);
+        document.getElementById('toggle-moon-armor-btn')?.addEventListener('click', toggleMoonArmor);
+        
+        // Close modal clicking outside
+        document.getElementById('qr-modal')?.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeQRModal();
+            }
+        });
+
+        // Auto-detect role from URL parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const gameCode = urlParams.get('game');
+        const playerNameFromURL = urlParams.get('player');
+        
+        if (gameCode) {
+            // Player joining via QR code
+            document.getElementById('player-join').classList.remove('hidden');
+            document.getElementById('display-game-code').textContent = gameCode;
+            loadAvailablePlayers(gameCode);
+            
+            // Auto-join if player name is in URL
+            if (playerNameFromURL) {
+                setTimeout(() => {
+                    joinGame();
+                }, 500);
+            }
+        } else {
+            // Master creating new game
+            document.getElementById('master-setup').classList.remove('hidden');
+            generatePlayerNameInputs();
+        }
+
+        function loadAvailablePlayers(code) {
+            database.ref('games/' + code).on('value', (snapshot) => {
+                if (!snapshot.exists()) {
+                    return;
+                }
+
+                const gameData = snapshot.val();
+                const select = document.getElementById('player-name-select');
+                
+                if (!select) return;
+                
+                select.innerHTML = '<option value="">Seleziona il tuo nome...</option>';
+                
+                gameData.players.forEach((player) => {
+                    const option = document.createElement('option');
+                    option.value = player.name;
+                    option.textContent = player.name + (player.connected ? ' ✓' : '');
+                    option.disabled = player.connected;
+                    select.appendChild(option);
+                });
+                
+                // Update connected players list for master
+                const connectedList = document.getElementById('connected-players-list');
+                if (connectedList) {
+                    connectedList.innerHTML = gameData.players
+                        .map(p => `<div style="color: ${p.connected ? '#4ecca3' : '#888'}; padding: 5px;">
+                            ${p.connected ? '✓' : '○'} ${p.name}
+                        </div>`)
+                        .join('');
+                }
+            });
+        }
+
+        function generatePlayerNameInputs() {
+            const numPlayers = parseInt(document.getElementById('num-players').value);
+            const container = document.getElementById('player-names-container');
+            container.innerHTML = '<div class="input-group"><label>Nomi degli altri giocatori:</label></div>';
+            
+            for (let i = 1; i < numPlayers; i++) {
+                const div = document.createElement('div');
+                div.className = 'player-input';
+                div.innerHTML = `
+                    <input type="text" placeholder="Giocatore ${i + 1}" id="player-${i}">
+                `;
+                container.appendChild(div);
+            }
+
+            // Auto-suggest HP
+            const hpInput = document.getElementById('initial-hp');
+            if (numPlayers >= 7) {
+                hpInput.value = 80;
+            } else {
+                hpInput.value = 70;
+            }
+        }
+
+        function createGame() {
+            const masterName = document.getElementById('master-name').value.trim();
+            const numPlayers = parseInt(document.getElementById('num-players').value);
+            const initialHP = parseInt(document.getElementById('initial-hp').value);
+
+            if (!masterName) {
+                alert('Inserisci il tuo nome!');
+                return;
+            }
+
+            const players = [{ 
+                name: masterName, 
+                hp: initialHP, 
+                isEliminated: false, 
+                isMaster: true, 
+                connected: true, 
+                isImmortal: false, 
+                multiplier: 1,
+                multiplierAppliedBy: null,
+                skipTurn: false,
+                customDiceCount: null,
+                krakenMark: false,
+                checkmateHP: null,
+                damageToHeal: false,
+                sunArmor: false,
+                moonArmor: false,
+                temporaryEffects: {
+                    immortal: false,
+                    multiplier: false,
+                    skipTurn: false,
+                    customDice: false,
+                    damageToHeal: false,
+                    sunArmor: false,
+                    moonArmor: false
+                }
+            }];
+            
+            for (let i = 1; i < numPlayers; i++) {
+                const playerName = document.getElementById(`player-${i}`).value.trim();
+                if (playerName) {
+                    players.push({ 
+                        name: playerName, 
+                        hp: initialHP, 
+                        isEliminated: false, 
+                        isMaster: false, 
+                        connected: false, 
+                        isImmortal: false, 
+                        multiplier: 1,
+                        multiplierAppliedBy: null,
+                        skipTurn: false,
+                        customDiceCount: null,
+                        krakenMark: false,
+                        checkmateHP: null,
+                        damageToHeal: false,
+                        sunArmor: false,
+                        moonArmor: false,
+                        temporaryEffects: {
+                            immortal: false,
+                            multiplier: false,
+                            skipTurn: false,
+                            customDice: false,
+                            damageToHeal: false,
+                            sunArmor: false,
+                            moonArmor: false
+                        }
+                    });
+                }
+            }
+
+            if (players.length < 2) {
+                alert('Servono almeno 2 giocatori!');
+                return;
+            }
+
+            const code = generateGameCode();
+            gameState.gameCode = code;
+            gameState.isMaster = true;
+            gameState.playerName = masterName;
+
+            const gameData = {
+                players: players,
+                currentTurn: 0,
+                direction: 'clockwise',
+                diceCount: 3,
+                history: [],
+                startTime: null,
+                started: false,
+                initialHP: initialHP
+            };
+
+            database.ref('games/' + code).set(gameData).then(() => {
+                showQRCode(code);
+            });
+        }
+
+        function generateGameCode() {
+            return Math.random().toString(36).substring(2, 8).toUpperCase();
+        }
+
+        function showQRCode(code) {
+            document.getElementById('master-setup').classList.add('hidden');
+            document.getElementById('qr-display').classList.remove('hidden');
+            document.getElementById('game-code-display').textContent = code;
+
+            const url = window.location.origin + window.location.pathname + '?game=' + code;
+            
+            new QRCode(document.getElementById('qrcode'), {
+                text: url,
+                width: 200,
+                height: 200,
+                colorDark: "#000000",
+                colorLight: "#ffffff"
+            });
+
+            listenToGameChanges(code);
+        }
+
+        function joinGame() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('game');
+            const playerNameFromURL = urlParams.get('player');
+            
+            // If player name is in URL, use it directly
+            let playerName = playerNameFromURL;
+            
+            // Otherwise get from select
+            if (!playerName) {
+                playerName = document.getElementById('player-name-select').value;
+            }
+
+            if (!playerName || !code) {
+                alert('Seleziona il tuo nome!');
+                return;
+            }
+
+            database.ref('games/' + code).once('value').then((snapshot) => {
+                if (!snapshot.exists()) {
+                    alert('Partita non trovata!');
+                    return;
+                }
+
+                const gameData = snapshot.val();
+                
+                // Find player by name (regardless of connection status)
+                const playerIndex = gameData.players.findIndex(p => p.name === playerName);
+                
+                if (playerIndex < 0) {
+                    alert('Giocatore non trovato in questa partita!');
+                    return;
+                }
+
+                // Mark player as connected (reconnection allowed)
+                gameData.players[playerIndex].connected = true;
+                database.ref('games/' + code + '/players/' + playerIndex).update({ connected: true });
+
+                gameState.gameCode = code;
+                gameState.isMaster = false;
+                gameState.playerName = playerName;
+
+                listenToGameChanges(code);
+                
+                if (gameData.started) {
+                    showGameScreen();
+                } else {
+                    // Show waiting screen
+                    document.getElementById('setup-screen').innerHTML = `
+                        <div style="text-align: center; padding: 40px;">
+                            <h2 style="color: #ffd700; margin-bottom: 20px;">✅ Connesso come ${playerName}!</h2>
+                            <p style="font-size: 1.2em; margin-bottom: 30px;">In attesa che il Master avvii la partita...</p>
+                            <div style="font-size: 3em; animation: pulse 2s infinite;">⏳</div>
+                        </div>
+                    `;
+                }
+            });
+        }
+
+        function startGame() {
+            if (!gameState.gameCode) return;
+
+            const startTime = Date.now();
+            database.ref('games/' + gameState.gameCode).update({
+                started: true,
+                startTime: startTime
+            });
+
+            showGameScreen();
+        }
+
+        function showGameScreen() {
+            document.getElementById('setup-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+
+            if (gameState.isMaster) {
+                document.getElementById('master-controls').classList.remove('hidden');
+            }
+
+            renderDiceInputs();
+        }
+
+        function listenToGameChanges(code) {
+            database.ref('games/' + code).on('value', (snapshot) => {
+                if (!snapshot.exists()) return;
+
+                const data = snapshot.val();
+                gameState.players = data.players || [];
+                gameState.currentTurn = data.currentTurn || 0;
+                gameState.direction = data.direction || 'clockwise';
+                gameState.diceCount = data.diceCount || 3;
+                gameState.history = data.history || [];
+                gameState.startTime = data.startTime;
+                gameState.initialHP = data.initialHP || 70;
+                gameState.stats = data.stats || {};
+
+                if (data.started && document.getElementById('setup-screen').classList.contains('hidden') === false) {
+                    showGameScreen();
+                }
+                
+                // Show winner notification when game ends
+                if (data.gameEnded && data.winner) {
+                    const isYou = data.winner === gameState.playerName;
+                    showWinnerNotification(data.winner, isYou);
+                }
+
+                renderPlayers();
+                renderLeaderboard();
+                renderHistory();
+                updateTurnDisplay();
+                updateDirectionDisplay();
+                renderDiceInputs();
+                updateMasterControls();
+
+                if (gameState.startTime && !timerInterval) {
+                    startTimer();
+                }
+            });
+        }
+
+        function renderPlayers() {
+            const container = document.getElementById('players-list');
+            container.innerHTML = '';
+
+            gameState.players.forEach((player, index) => {
+                const card = document.createElement('div');
+                card.className = 'player-card';
+                card.id = `player-card-${index}`;
+                
+                if (index === gameState.currentTurn && !player.isEliminated) {
+                    card.classList.add('active-turn');
+                }
+                
+                if (player.isEliminated) {
+                    card.classList.add('eliminated');
+                }
+
+                const hpClass = player.hp < 30 ? 'low' : '';
+                
+                card.innerHTML = `
+                    <div class="player-info">
+                        <div class="player-name">${player.name}${player.isMaster ? ' 👑' : ''}${player.isImmortal ? ' ⭐' : ''}${(player.multiplier > 1 || player.multiplier < 1) ? ' ✨x' + player.multiplier : ''}${player.skipTurn ? ' ⏭️' : ''}${player.customDiceCount ? ' 🎲×' + player.customDiceCount : ''}${player.krakenMark ? ' 🐙' : ''}${player.checkmateHP ? ' ♟️' : ''}${player.damageToHeal ? ' 💫' : ''}${player.sunArmor ? ' ☀️' : ''}${player.moonArmor ? ' 🌙' : ''}</div>
+                        <div class="player-hp ${hpClass}">${player.hp} HP</div>
+                    </div>
+                    ${player.isEliminated ? '<div style="color: #dc3545; margin-top: 5px;">☠️ Eliminato</div>' : ''}
+                    ${player.isImmortal ? '<div style="color: #ffd700; margin-top: 5px;">⭐ Immortale' + (player.temporaryEffects?.immortal ? ' (temp)' : '') + '</div>' : ''}
+                    ${player.multiplier > 1 || player.multiplier < 1 ? '<div style="color: #ff00ff; margin-top: 5px;">✨ Moltiplicatore x' + player.multiplier + (player.temporaryEffects?.multiplier ? ' (temp)' : '') + '</div>' : ''}
+                    ${player.skipTurn ? '<div style="color: #ff9800; margin-top: 5px;">⏭️ Salta Turno' + (player.temporaryEffects?.skipTurn ? ' (temp)' : '') + '</div>' : ''}
+                    ${player.customDiceCount ? '<div style="color: #00ffff; margin-top: 5px;">🎲 Dadi: ' + player.customDiceCount + ' (temp)</div>' : ''}
+                    ${player.krakenMark ? '<div style="color: #9933ff; margin-top: 5px; font-weight: bold;">🐙 Marchio del Kraken (≤10 HP = morte)</div>' : ''}
+                    ${player.checkmateHP ? '<div style="color: #ff0000; margin-top: 5px; font-weight: bold;">♟️ Scacco Matto (' + player.checkmateHP + ' HP = morte)</div>' : ''}
+                    ${player.damageToHeal ? '<div style="color: #ff69b4; margin-top: 5px;">💫 Conversione Danni→Cure (temp)</div>' : ''}
+                    ${player.sunArmor ? '<div style="color: #ffa500; margin-top: 5px;">☀️ Armatura del Sole (temp)</div>' : ''}
+                    ${player.moonArmor ? '<div style="color: #87ceeb; margin-top: 5px;">🌙 Armatura della Luna (temp)</div>' : ''}
+                `;
+                
+                container.appendChild(card);
+            });
+        }
+
+        function renderLeaderboard() {
+            const container = document.getElementById('leaderboard-list');
+            const sorted = [...gameState.players].sort((a, b) => b.hp - a.hp);
+            
+            container.innerHTML = '';
+            sorted.forEach((player, index) => {
+                const item = document.createElement('div');
+                item.className = 'leaderboard-item';
+                if (index === 0) item.classList.add('winner');
+                
+                item.innerHTML = `
+                    <span>${index + 1}. ${player.name}</span>
+                    <span>${player.hp} HP</span>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function renderHistory() {
+            const container = document.getElementById('history');
+            container.innerHTML = '';
+            
+            const recent = gameState.history.slice(-20).reverse();
+            recent.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'history-item';
+                
+                // Determine icon and class based on content
+                let icon = '🎲';
+                let itemClass = '';
+                
+                if (item.includes('riceve') && item.includes('danni')) {
+                    icon = '💥';
+                    itemClass = 'damage';
+                } else if (item.includes('si cura') || item.includes('recupera')) {
+                    icon = '💚';
+                    itemClass = 'heal';
+                } else if (item.includes('Coppia') || item.includes('Tris') || item.includes('POKER')) {
+                    icon = '✨';
+                    itemClass = 'special';
+                } else if (item.includes('rianimato')) {
+                    icon = '🔄';
+                    itemClass = 'heal';
+                } else if (item.includes('scambiato')) {
+                    icon = '🔄';
+                    itemClass = 'special';
+                } else if (item.includes('Nuova partita') || item.includes('terminata')) {
+                    icon = '🏁';
+                    itemClass = 'special';
+                } else if (item.includes('Direzione')) {
+                    icon = '⭮';
+                    itemClass = 'special';
+                }
+                
+                div.className += ' ' + itemClass;
+                div.innerHTML = `<span class="icon">${icon}</span><span>${item}</span>`;
+                container.appendChild(div);
+            });
+        }
+
+        function updateTurnDisplay() {
+            const currentPlayer = gameState.players[gameState.currentTurn];
+            if (currentPlayer) {
+                document.getElementById('turn-player').textContent = currentPlayer.name;
+                
+                // Visual turn indicator - green pulsing border
+                if (currentPlayer.name === gameState.playerName) {
+                    document.body.classList.add('my-turn');
+                } else {
+                    document.body.classList.remove('my-turn');
+                }
+            }
+        }
+
+        function updateDirectionDisplay() {
+            const arrow = gameState.direction === 'clockwise' ? '⭮' : '⭯';
+            const text = gameState.direction === 'clockwise' ? 'Oraria' : 'Antioraria';
+            document.getElementById('direction').innerHTML = `Direzione: ${arrow} ${text}`;
+        }
+
+        function renderDiceInputs() {
+            const container = document.getElementById('dice-inputs');
+            container.innerHTML = '';
+            
+            // Check if current player has custom dice count
+            const currentPlayer = gameState.players[gameState.currentTurn];
+            const diceCount = currentPlayer?.customDiceCount || gameState.diceCount;
+            
+            for (let i = 0; i < diceCount; i++) {
+                const div = document.createElement('div');
+                div.className = 'dice-input';
+                div.innerHTML = `<input type="number" min="1" max="6" id="dice-${i}" placeholder="D${i + 1}">`;
+                container.appendChild(div);
+            }
+            
+            // Show indicator if using custom dice
+            if (currentPlayer?.customDiceCount) {
+                const indicator = document.createElement('div');
+                indicator.style.cssText = 'color: #00ffff; font-size: 0.9em; margin-top: 10px; text-align: center;';
+                indicator.textContent = `🎲 Dadi personalizzati: ${currentPlayer.customDiceCount} (questo turno)`;
+                container.appendChild(indicator);
+            }
+        }
+
+        function updateMasterControls() {
+            if (!gameState.isMaster) return;
+
+            // Update turn change selector
+            const turnSelect = document.getElementById('next-turn-player');
+            turnSelect.innerHTML = '';
+            
+            gameState.players.forEach((player, index) => {
+                if (!player.isEliminated) {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = player.name;
+                    turnSelect.appendChild(option);
+                }
+            });
+
+            // Update multi-select for HP modification
+            const multiSelect = document.getElementById('target-players');
+            multiSelect.innerHTML = '';
+            
+            gameState.players.forEach((player, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = player.name + (player.isEliminated ? ' (Eliminato)' : '');
+                multiSelect.appendChild(option);
+            });
+
+            // Update swap HP selects
+            const swapSelect1 = document.getElementById('swap-player-1');
+            const swapSelect2 = document.getElementById('swap-player-2');
+            
+            if (swapSelect1 && swapSelect2) {
+                swapSelect1.innerHTML = '';
+                swapSelect2.innerHTML = '';
+                
+                gameState.players.forEach((player, index) => {
+                    const option1 = document.createElement('option');
+                    option1.value = index;
+                    option1.textContent = player.name;
+                    swapSelect1.appendChild(option1);
+                    
+                    const option2 = document.createElement('option');
+                    option2.value = index;
+                    option2.textContent = player.name;
+                    swapSelect2.appendChild(option2);
+                });
+            }
+            
+            // Update QR player select
+            const qrSelect = document.getElementById('qr-player-select');
+            if (qrSelect) {
+                qrSelect.innerHTML = '';
+                
+                gameState.players.forEach((player, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = player.name;
+                    qrSelect.appendChild(option);
+                });
+            }
+            
+            // Update immortality select
+            const immortalSelect = document.getElementById('immortal-players');
+            if (immortalSelect) {
+                immortalSelect.innerHTML = '';
+                
+                gameState.players.forEach((player, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = player.name + (player.isImmortal ? ' ⭐' : '');
+                    if (player.isImmortal) {
+                        option.selected = true;
+                    }
+                    immortalSelect.appendChild(option);
+                });
+            }
+            
+            // Update multiplier select
+            const multiplierSelect = document.getElementById('multiplier-players');
+            if (multiplierSelect) {
+                multiplierSelect.innerHTML = '';
+                
+                gameState.players.forEach((player, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = player.name + ((player.multiplier > 1 || player.multiplier < 1) ? ' ✨x' + player.multiplier : '');
+                    multiplierSelect.appendChild(option);
+                });
+            }
+            
+            // Update skip turn select
+            const skipTurnSelect = document.getElementById('skip-turn-players');
+            if (skipTurnSelect) {
+                skipTurnSelect.innerHTML = '';
+                
+                gameState.players.forEach((player, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = player.name + (player.skipTurn ? ' ⏭️' : '');
+                    if (player.skipTurn) {
+                        option.selected = true;
+                    }
+                    skipTurnSelect.appendChild(option);
+                });
+            }
+            
+            // Update custom dice select
+            const customDiceSelect = document.getElementById('custom-dice-players');
+            if (customDiceSelect) {
+                customDiceSelect.innerHTML = '';
+                
+                gameState.players.forEach((player, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = player.name + (player.customDiceCount ? ' 🎲×' + player.customDiceCount : '');
+                    customDiceSelect.appendChild(option);
+                });
+            }
+            
+            // Update kraken mark select
+            const krakenMarkSelect = document.getElementById('kraken-mark-players');
+            if (krakenMarkSelect) {
+                krakenMarkSelect.innerHTML = '';
+                
+                gameState.players.forEach((player, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = player.name + (player.krakenMark ? ' 🐙' : '');
+                    if (player.krakenMark) {
+                        option.selected = true;
+                    }
+                    krakenMarkSelect.appendChild(option);
+                });
+            }
+            
+            // Update checkmate select
+            const checkmateSelect = document.getElementById('checkmate-players');
+            if (checkmateSelect) {
+                checkmateSelect.innerHTML = '';
+                
+                gameState.players.forEach((player, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = player.name + (player.checkmateHP ? ' ♟️' + player.checkmateHP : '');
+                    checkmateSelect.appendChild(option);
+                });
+            }
+            
+            // Update damage-to-heal select
+            const damageToHealSelect = document.getElementById('damage-to-heal-players');
+            if (damageToHealSelect) {
+                damageToHealSelect.innerHTML = '';
+                gameState.players.forEach((player, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = player.name + (player.damageToHeal ? ' 💫' : '');
+                    if (player.damageToHeal) option.selected = true;
+                    damageToHealSelect.appendChild(option);
+                });
+            }
+            
+            // Update sun armor select
+            const sunArmorSelect = document.getElementById('sun-armor-players');
+            if (sunArmorSelect) {
+                sunArmorSelect.innerHTML = '';
+                gameState.players.forEach((player, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = player.name + (player.sunArmor ? ' ☀️' : '');
+                    if (player.sunArmor) option.selected = true;
+                    sunArmorSelect.appendChild(option);
+                });
+            }
+            
+            // Update moon armor select
+            const moonArmorSelect = document.getElementById('moon-armor-players');
+            if (moonArmorSelect) {
+                moonArmorSelect.innerHTML = '';
+                gameState.players.forEach((player, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = player.name + (player.moonArmor ? ' 🌙' : '');
+                    if (player.moonArmor) option.selected = true;
+                    moonArmorSelect.appendChild(option);
+                });
+            }
+        }
+
+        function calculateDice() {
+            const currentPlayerIndex = gameState.currentTurn;
+            const currentPlayer = gameState.players[currentPlayerIndex];
+
+            if (!gameState.isMaster && currentPlayer.name !== gameState.playerName) {
+                alert('Non è il tuo turno!');
+                return;
+            }
+
+            if (currentPlayer.isEliminated) {
+                alert('Il giocatore corrente è eliminato!');
+                return;
+            }
+            
+            if (currentPlayer.skipTurn) {
+                alert('Questo giocatore deve saltare il turno!');
+                return;
+            }
+
+            const diceValues = [];
+            const diceCount = currentPlayer.customDiceCount || gameState.diceCount;
+            
+            for (let i = 0; i < diceCount; i++) {
+                const value = parseInt(document.getElementById(`dice-${i}`).value);
+                if (!value || value < 1 || value > 6) {
+                    alert('Inserisci valori validi per tutti i dadi (1-6)!');
+                    return;
+                }
+                diceValues.push(value);
+            }
+
+            const result = processDiceRoll(diceValues, currentPlayerIndex);
+            displayResult(result);
+            applyResult(result);
+        }
+
+        function processDiceRoll(dice, shooterIndex) {
+            const sum = dice.reduce((a, b) => a + b, 0);
+            const counts = {};
+            dice.forEach(d => counts[d] = (counts[d] || 0) + 1);
+            
+            const maxCount = Math.max(...Object.values(counts));
+            const pairValue = maxCount >= 2 ? parseInt(Object.keys(counts).find(k => counts[k] === maxCount)) : null;
+
+            let damage = sum;
+            let specialEffect = null;
+            let selfHeal = 0;
+            let cardsDrawn = 0;
+            let isPoker = false;
+
+            // POKER - 4 dadi uguali = VITTORIA ISTANTANEA
+            if (maxCount === 4) {
+                isPoker = true;
+                specialEffect = 'POKER - VITTORIA!';
+                damage = 0; // No damage, instant win
+            } else if (maxCount === 3) {
+                // Tris: (valore × valore) + valore del terzo dado
+                const trisDice = dice.filter(d => d === pairValue);
+                damage = (pairValue * pairValue) + trisDice[2];
+                selfHeal = damage;
+                cardsDrawn = 2;
+                specialEffect = 'Tris';
+            } else if (maxCount === 2) {
+                // Coppia: (valore × valore) + altro dado
+                const otherDice = dice.find(d => d !== pairValue);
+                damage = (pairValue * pairValue) + (otherDice || 0);
+                cardsDrawn = 1;
+                specialEffect = 'Coppia';
+            }
+
+            const targetIndex = !isPoker ? findTarget(sum, shooterIndex) : -1;
+
+            return {
+                dice,
+                sum,
+                damage,
+                specialEffect,
+                selfHeal,
+                cardsDrawn,
+                shooterIndex,
+                targetIndex,
+                isPoker
+            };
+        }
+
+        function findTarget(sum, shooterIndex) {
+            const activePlayers = gameState.players
+                .map((p, i) => ({ player: p, index: i }))
+                .filter(({ player, index }) => !player.isEliminated && index !== shooterIndex);
+
+            if (activePlayers.length === 0) return -1;
+
+            let count = sum % activePlayers.length;
+            if (count === 0) count = activePlayers.length;
+
+            if (gameState.direction === 'clockwise') {
+                // Senso orario: ordina per index crescente, partendo da dopo lo shooter
+                const sorted = [...activePlayers].sort((a, b) => {
+                    // Metti prima quelli dopo lo shooter, poi quelli prima
+                    const aAfter = a.index > shooterIndex ? a.index : a.index + 1000;
+                    const bAfter = b.index > shooterIndex ? b.index : b.index + 1000;
+                    return aAfter - bAfter;
+                });
+                
+                const targetPos = (count - 1) % sorted.length;
+                return sorted[targetPos].index;
+            } else {
+                // Senso antiorario: ordina per index decrescente, partendo da prima dello shooter
+                const sorted = [...activePlayers].sort((a, b) => {
+                    // Metti prima quelli prima dello shooter, poi quelli dopo (ma in ordine inverso)
+                    const aValue = a.index < shooterIndex ? (shooterIndex - a.index) : (shooterIndex + gameState.players.length - a.index);
+                    const bValue = b.index < shooterIndex ? (shooterIndex - b.index) : (shooterIndex + gameState.players.length - b.index);
+                    return aValue - bValue;
+                });
+                
+                const targetPos = (count - 1) % sorted.length;
+                return sorted[targetPos].index;
+            }
+        }
+
+        function displayResult(result) {
+            const display = document.getElementById('result-display');
+            const text = document.getElementById('result-text');
+            
+            const shooter = gameState.players[result.shooterIndex];
+            const target = result.targetIndex >= 0 ? gameState.players[result.targetIndex] : null;
+
+            let message = `🎲 Dadi: ${result.dice.join(', ')}<br>`;
+            
+            if (result.isPoker) {
+                message += `<br>🏆🏆🏆 POKER! 🏆🏆🏆<br>`;
+                message += `<strong style="font-size: 1.5em; color: #ffd700;">VITTORIA ISTANTANEA!</strong><br>`;
+                message += `${shooter.name} vince la partita!<br>`;
+            } else {
+                message += `📊 Somma: ${result.sum}<br>`;
+                
+                if (result.specialEffect) {
+                    message += `✨ ${result.specialEffect}!<br>`;
+                }
+                
+                if (target) {
+                    message += `🎯 Bersaglio: ${target.name}<br>`;
+                    message += `💥 Danno: ${result.damage}<br>`;
+                }
+                
+                if (result.selfHeal > 0) {
+                    message += `💚 Cura: ${result.selfHeal} HP<br>`;
+                }
+                
+                if (result.cardsDrawn > 0) {
+                    message += `🃏 Pesca ${result.cardsDrawn} carta/e del fato<br>`;
+                }
+            }
+
+            text.innerHTML = message;
+            display.classList.remove('hidden');
+        }
+
+        function applyResult(result) {
+            // Save current state for rollback (Master only)
+            if (gameState.isMaster) {
+                gameState.previousState = {
+                    players: JSON.parse(JSON.stringify(gameState.players)),
+                    currentTurn: gameState.currentTurn,
+                    history: [...gameState.history],
+                    stats: JSON.parse(JSON.stringify(gameState.stats))
+                };
+            }
+            
+            const shooter = gameState.players[result.shooterIndex];
+            
+            // Initialize stats for shooter if not exists
+            if (!gameState.stats[shooter.name]) {
+                gameState.stats[shooter.name] = {
+                    damageDealt: 0,
+                    damageTaken: 0,
+                    healingDone: 0,
+                    specialMoves: 0,
+                    turns: 0
+                };
+            }
+            
+            gameState.stats[shooter.name].turns++;
+            
+            // POKER = INSTANT WIN
+            if (result.isPoker) {
+                gameState.stats[shooter.name].specialMoves++;
+                gameState.history.push(`🏆 ${shooter.name} ha ottenuto POKER (${result.dice.join(',')}) e VINCE LA PARTITA!`);
+                
+                database.ref('games/' + gameState.gameCode).update({
+                    history: gameState.history,
+                    gameEnded: true,
+                    winner: shooter.name,
+                    stats: gameState.stats
+                });
+                
+                playSound('poker');
+                
+                setTimeout(() => {
+                    const isYou = shooter.name === gameState.playerName;
+                    showWinnerNotification(shooter.name, isYou);
+                }, 1000);
+                
+                return;
+            }
+            
+            const target = result.targetIndex >= 0 ? gameState.players[result.targetIndex] : null;
+
+            // Apply damage
+            if (target) {
+                // Check if target is immortal
+                if (target.isImmortal) {
+                    // Immortal player takes no damage
+                    gameState.history.push(`⭐ ${target.name} è immortale e non subisce danni!`);
+                    animateHP(result.targetIndex, 0, 'immortal'); // Animazione immortalità!
+                    playSound('heal'); // Suono positivo per indicare l'immortalità
+                    
+                    // Visual effect for immortal player
+                    if (target.name === gameState.playerName) {
+                        screenFlash('heal');
+                        createParticles(window.innerWidth / 2, window.innerHeight / 2, 'heal');
+                    }
+                } else {
+                    // Initialize stats for target if not exists
+                    if (!gameState.stats[target.name]) {
+                        gameState.stats[target.name] = {
+                            damageDealt: 0,
+                            damageTaken: 0,
+                            healingDone: 0,
+                            specialMoves: 0,
+                            turns: 0
+                        };
+                    }
+                    
+                    // Apply multiplier to damage
+                    const multiplier = target.multiplier || 1;
+                    const actualDamage = Math.ceil(result.damage * multiplier); // Arrotonda per eccesso
+                    
+                    const wasAlive = !target.isEliminated;
+                    
+                    // Check for damage conversion effects
+                    let shouldConvertToHeal = false;
+                    let conversionReason = '';
+                    
+                    // 1. Conversione Danni→Cure (💫) - Converte TUTTI i danni
+                    if (target.damageToHeal) {
+                        shouldConvertToHeal = true;
+                        conversionReason = '💫 Conversione Danni→Cure';
+                    }
+                    // 2. Armatura del Sole (☀️) - Converte solo danni DISPARI
+                    else if (target.sunArmor && actualDamage % 2 !== 0) {
+                        shouldConvertToHeal = true;
+                        conversionReason = `☀️ Armatura del Sole (${actualDamage} dispari)`;
+                    }
+                    // 3. Armatura della Luna (🌙) - Converte solo danni PARI
+                    else if (target.moonArmor && actualDamage % 2 === 0) {
+                        shouldConvertToHeal = true;
+                        conversionReason = `🌙 Armatura della Luna (${actualDamage} pari)`;
+                    }
+                    
+                    if (shouldConvertToHeal) {
+                        // Converti danno in cura (NON aggiornare damageDealt/Taken!)
+                        target.hp += actualDamage;
+                        gameState.history.push(`${conversionReason}: ${target.name} si cura di ${actualDamage} HP invece di subirli!`);
+                        
+                        // Animazione speciale per conversione/armatura
+                        if (conversionReason.includes('💫')) {
+                            animateHP(result.targetIndex, actualDamage, 'conversion');
+                        } else {
+                            animateHP(result.targetIndex, actualDamage, 'armor');
+                        }
+                        
+                        playSound('heal');
+                        
+                        // Visual effects for heal
+                        if (target.name === gameState.playerName) {
+                            screenFlash('heal');
+                            createParticles(window.innerWidth / 2, window.innerHeight / 2, 'heal');
+                        }
+                    } else {
+                        // Applica danno normalmente - SOLO QUI aggiorniamo le stats
+                        gameState.stats[shooter.name].damageDealt += actualDamage;
+                        gameState.stats[target.name].damageTaken += actualDamage;
+                        
+                        target.hp = Math.max(0, target.hp - actualDamage);
+                        
+                        // Check Checkmate - auto-eliminate at exact HP value
+                        if (target.checkmateHP && target.hp === target.checkmateHP && !target.isEliminated) {
+                            target.hp = 0;
+                            target.isEliminated = true;
+                            gameState.history.push(`♟️ ${target.name} è stato eliminato dallo Scacco Matto! (${target.checkmateHP} HP)`);
+                            
+                            animateHP(result.targetIndex, 0, 'checkmate'); // Animazione checkmate!
+                            
+                            // Show elimination notification
+                            if (target.name === gameState.playerName && !gameState.isMaster) {
+                                setTimeout(() => showEliminatedNotification(), 500);
+                            }
+                            
+                            playSound('elimination');
+                        }
+                        // Check Kraken Mark - auto-eliminate at 10 HP or less
+                        else if (target.krakenMark && target.hp <= 10 && target.hp > 0 && !target.isEliminated) {
+                            target.hp = 0;
+                            target.isEliminated = true;
+                            gameState.history.push(`🐙 ${target.name} è stato eliminato dal Marchio del Kraken! (HP ≤ 10)`);
+                            
+                            animateHP(result.targetIndex, 0, 'kraken'); // Animazione kraken!
+                            
+                            // Show elimination notification
+                            if (target.name === gameState.playerName && !gameState.isMaster) {
+                                setTimeout(() => showEliminatedNotification(), 500);
+                            }
+                            
+                            playSound('elimination');
+                        } else if (target.hp === 0 && wasAlive) {
+                            target.isEliminated = true;
+                            
+                            // Show elimination notification to the eliminated player
+                            if (target.name === gameState.playerName && !gameState.isMaster) {
+                                setTimeout(() => showEliminatedNotification(), 500);
+                            }
+                            
+                            playSound('elimination');
+                        } else {
+                            playSound('hit');
+                            
+                            // Visual effects for the player who got hit
+                            if (target.name === gameState.playerName) {
+                                screenFlash('damage');
+                                createParticles(window.innerWidth / 2, window.innerHeight / 2, 'damage');
+                            }
+                        }
+                        
+                        animateHP(result.targetIndex, -actualDamage);
+                        
+                        // Add multiplier info to history
+                        if (multiplier !== 1) {
+                            gameState.history.push(`✨ ${target.name} ha un moltiplicatore x${multiplier}! Danno effettivo: ${actualDamage}`);
+                        }
+                    }
+                }
+            }
+
+            // Apply heal
+            if (result.selfHeal > 0) {
+                // Apply multiplier to heal
+                const multiplier = shooter.multiplier || 1;
+                const actualHeal = Math.ceil(result.selfHeal * multiplier); // Arrotonda per eccesso
+                
+                shooter.hp += actualHeal;
+                gameState.stats[shooter.name].healingDone += actualHeal;
+                animateHP(result.shooterIndex, actualHeal);
+                playSound('heal');
+                
+                // Visual effects for healer
+                if (shooter.name === gameState.playerName) {
+                    screenFlash('heal');
+                    createParticles(window.innerWidth / 2, window.innerHeight / 2, 'heal');
+                }
+                
+                // Add multiplier info to history
+                if (multiplier !== 1) {
+                    gameState.history.push(`✨ ${shooter.name} ha un moltiplicatore x${multiplier}! Cura effettiva: ${actualHeal}`);
+                }
+            }
+            
+            // Track special moves
+            if (result.specialEffect === 'Coppia' || result.specialEffect === 'Tris') {
+                gameState.stats[shooter.name].specialMoves++;
+            }
+
+            // History
+            let historyText = `${shooter.name} tira ${result.dice.join(', ')}`;
+            if (result.specialEffect) historyText += ` (${result.specialEffect})`;
+            if (target) historyText += ` → ${target.name} riceve ${result.damage} danni`;
+            if (result.selfHeal > 0) historyText += ` | ${shooter.name} si cura di ${result.selfHeal}`;
+            
+            gameState.history.push(historyText);
+
+            // Reset temporary effects for the player who just played
+            resetTemporaryEffects(result.shooterIndex);
+
+            // Next turn
+            const nextTurn = getNextActiveTurn();
+
+            // Update Firebase
+            database.ref('games/' + gameState.gameCode).update({
+                players: gameState.players,
+                currentTurn: nextTurn,
+                history: gameState.history,
+                stats: gameState.stats
+            });
+        }
+
+        function showEliminatedNotification() {
+            // Create overlay
+            const overlay = document.createElement('div');
+            overlay.className = 'hit-overlay';
+            document.body.appendChild(overlay);
+            
+            setTimeout(() => overlay.classList.add('show'), 10);
+
+            // Create notification
+            const notification = document.createElement('div');
+            notification.className = 'eliminated-notification';
+            notification.innerHTML = `
+                <h2>☠️ SEI STATO ELIMINATO! ☠️</h2>
+                <div style="font-size: 1.3em; color: #ff6b6b; margin-top: 20px;">
+                    La partita continua...
+                </div>
+            `;
+            document.body.appendChild(notification);
+
+            // Show animation
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 10);
+
+            // Vibrate if supported
+            if (navigator.vibrate) {
+                navigator.vibrate([300, 100, 300, 100, 500]);
+            }
+
+            // Remove after 4 seconds
+            setTimeout(() => {
+                overlay.style.opacity = '0';
+                notification.style.transform = 'translate(-50%, -50%) scale(0)';
+                setTimeout(() => {
+                    notification.remove();
+                    overlay.remove();
+                }, 400);
+            }, 4000);
+        }
+
+        function showWinnerNotification(winnerName, isYou = false) {
+            // Create overlay
+            const overlay = document.createElement('div');
+            overlay.className = 'hit-overlay';
+            document.body.appendChild(overlay);
+            
+            setTimeout(() => overlay.classList.add('show'), 10);
+
+            // Build statistics HTML
+            let statsHTML = '';
+            if (Object.keys(gameState.stats).length > 0) {
+                // Find MVP (most damage dealt)
+                let mvpName = '';
+                let maxDamage = 0;
+                let mostHealing = 0;
+                let healerName = '';
+                let mostSpecials = 0;
+                let specialistName = '';
+                
+                Object.keys(gameState.stats).forEach(name => {
+                    const stats = gameState.stats[name];
+                    if (stats.damageDealt > maxDamage) {
+                        maxDamage = stats.damageDealt;
+                        mvpName = name;
+                    }
+                    if (stats.healingDone > mostHealing) {
+                        mostHealing = stats.healingDone;
+                        healerName = name;
+                    }
+                    if (stats.specialMoves > mostSpecials) {
+                        mostSpecials = stats.specialMoves;
+                        specialistName = name;
+                    }
+                });
+                
+                statsHTML = `
+                    <div class="game-stats">
+                        <h3>📊 Statistiche Partita</h3>
+                        ${mvpName ? `<div class="stat-item">
+                            <span class="label">🏅 MVP (Più Danni)</span>
+                            <span class="value">${mvpName} - ${maxDamage} danni</span>
+                        </div>` : ''}
+                        ${healerName && mostHealing > 0 ? `<div class="stat-item">
+                            <span class="label">💚 Miglior Guaritore</span>
+                            <span class="value">${healerName} - ${mostHealing} HP</span>
+                        </div>` : ''}
+                        ${specialistName && mostSpecials > 0 ? `<div class="stat-item">
+                            <span class="label">✨ Re delle Combo</span>
+                            <span class="value">${specialistName} - ${mostSpecials} speciali</span>
+                        </div>` : ''}
+                        <div class="stat-item">
+                            <span class="label">⏱️ Durata Partita</span>
+                            <span class="value">${getGameDuration()}</span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Create notification
+            const notification = document.createElement('div');
+            notification.className = 'winner-notification';
+            notification.innerHTML = `
+                <h2>🏆 ${isYou ? 'HAI VINTO!' : 'PARTITA TERMINATA!'} 🏆</h2>
+                <div class="winner-name">${winnerName}</div>
+                <div style="font-size: 1.2em; color: #1a1a2e; margin-top: 20px; font-weight: 600;">
+                    ${isYou ? 'Complimenti campione!' : 'è il vincitore!'}
+                </div>
+                ${statsHTML}
+            `;
+            document.body.appendChild(notification);
+
+            // Show animation
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 10);
+
+            // Vibrate if supported
+            if (navigator.vibrate && isYou) {
+                navigator.vibrate([100, 50, 100, 50, 100, 50, 500]);
+            }
+
+            // Add new game button for master after 3 seconds
+            if (gameState.isMaster) {
+                setTimeout(() => {
+                    const newGameBtn = document.createElement('button');
+                    newGameBtn.textContent = '🎮 Nuova Partita';
+                    newGameBtn.style.cssText = 'margin-top: 20px; width: auto; padding: 15px 30px;';
+                    newGameBtn.onclick = () => {
+                        startNewGame();
+                    };
+                    notification.appendChild(newGameBtn);
+                }, 3000);
+            }
+        }
+        
+        function startNewGame() {
+            if (!gameState.isMaster) return;
+            
+            if (!confirm('Vuoi iniziare una nuova partita con gli stessi giocatori?')) return;
+            
+            // Reset game state keeping players connected
+            const resetPlayers = gameState.players.map(player => ({
+                ...player,
+                hp: gameState.initialHP || 70,
+                isEliminated: false,
+                isImmortal: false,
+                multiplier: 1,
+                multiplierAppliedBy: null,
+                skipTurn: false,
+                customDiceCount: null,
+                krakenMark: false,
+                checkmateHP: null,
+                damageToHeal: false,
+                sunArmor: false,
+                moonArmor: false,
+                temporaryEffects: {
+                    immortal: false,
+                    multiplier: false,
+                    skipTurn: false,
+                    customDice: false,
+                    damageToHeal: false,
+                    sunArmor: false,
+                    moonArmor: false
+                }
+                // Mantiene: name, isMaster, connected
+            }));
+            
+            // Reset game data
+            database.ref('games/' + gameState.gameCode).update({
+                players: resetPlayers,
+                currentTurn: 0,
+                history: ['🎮 Nuova partita iniziata!'],
+                stats: {},
+                gameEnded: false,
+                winner: null,
+                startTime: Date.now(),
+                direction: 'clockwise'
+            });
+            
+            // Reload page to reset UI
+            location.reload();
+        }
+        
+        function getGameDuration() {
+            if (!gameState.startTime) return '0:00';
+            const duration = Date.now() - gameState.startTime;
+            const minutes = Math.floor(duration / 60000);
+            const seconds = Math.floor((duration % 60000) / 1000);
+            return `${minutes}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        function getNextActiveTurn() {
+            const activePlayers = gameState.players.map((p, i) => i).filter(i => !gameState.players[i].isEliminated);
+            
+            if (activePlayers.length <= 1) return gameState.currentTurn;
+
+            let nextIndex = gameState.currentTurn;
+            let attempts = 0;
+            
+            do {
+                if (gameState.direction === 'clockwise') {
+                    nextIndex = (nextIndex + 1) % gameState.players.length;
+                } else {
+                    nextIndex = (nextIndex - 1 + gameState.players.length) % gameState.players.length;
+                }
+                attempts++;
+                
+                // Se il giocatore ha skipTurn attivo, aggiungilo alla history e continua
+                if (gameState.players[nextIndex].skipTurn && !gameState.players[nextIndex].isEliminated) {
+                    gameState.history.push(`⏭️ ${gameState.players[nextIndex].name} salta il turno`);
+                }
+                
+            } while ((gameState.players[nextIndex].isEliminated || gameState.players[nextIndex].skipTurn) && attempts < gameState.players.length);
+
+            return nextIndex;
+        }
+
+        function animateHP(playerIndex, amount, effectType = null) {
+            const card = document.getElementById(`player-card-${playerIndex}`);
+            if (!card) return;
+
+            // Remove any existing animation classes
+            card.classList.remove('animate-damage', 'animate-heal', 'animate-immortal', 
+                                 'animate-multiplier', 'animate-conversion', 'animate-armor',
+                                 'animate-kraken', 'animate-checkmate');
+
+            // Apply appropriate animation based on effect type or amount
+            if (effectType === 'immortal') {
+                card.classList.add('animate-immortal');
+                setTimeout(() => card.classList.remove('animate-immortal'), 1500);
+            } else if (effectType === 'multiplier') {
+                card.classList.add('animate-multiplier');
+                setTimeout(() => card.classList.remove('animate-multiplier'), 1200);
+            } else if (effectType === 'conversion') {
+                card.classList.add('animate-conversion');
+                setTimeout(() => card.classList.remove('animate-conversion'), 1000);
+            } else if (effectType === 'armor') {
+                card.classList.add('animate-armor');
+                setTimeout(() => card.classList.remove('animate-armor'), 1200);
+            } else if (effectType === 'kraken') {
+                card.classList.add('animate-kraken');
+                setTimeout(() => card.classList.remove('animate-kraken'), 1000);
+            } else if (effectType === 'checkmate') {
+                card.classList.add('animate-checkmate');
+                setTimeout(() => card.classList.remove('animate-checkmate'), 1000);
+            } else if (amount < 0) {
+                card.classList.add('animate-damage');
+                setTimeout(() => card.classList.remove('animate-damage'), 600);
+            } else if (amount > 0) {
+                card.classList.add('animate-heal');
+                setTimeout(() => card.classList.remove('animate-heal'), 800);
+            }
+
+            showFloatingNumber(card, amount, effectType);
+        }
+
+        function showFloatingNumber(element, amount, effectType = null) {
+            const rect = element.getBoundingClientRect();
+            const floater = document.createElement('div');
+            floater.className = 'floating-number';
+            
+            // Add effect-specific class
+            if (effectType === 'immortal') {
+                floater.classList.add('immortal');
+                floater.textContent = '⭐ IMMUNE';
+            } else if (effectType === 'multiplier') {
+                floater.classList.add('multiplier');
+                floater.textContent = '✨';
+            } else if (effectType === 'conversion') {
+                floater.classList.add('conversion');
+                floater.textContent = amount > 0 ? `💫 +${amount}` : `💫 ${amount}`;
+            } else if (effectType === 'armor') {
+                floater.classList.add('conversion');
+                floater.textContent = amount > 0 ? `🛡️ +${amount}` : `🛡️ ${amount}`;
+            } else if (effectType === 'kraken') {
+                floater.classList.add('damage');
+                floater.textContent = '🐙 KRAKEN!';
+            } else if (effectType === 'checkmate') {
+                floater.classList.add('damage');
+                floater.textContent = '♟️ CHECKMATE!';
+            } else if (amount < 0) {
+                floater.classList.add('damage');
+                floater.textContent = amount;
+            } else if (amount > 0) {
+                floater.classList.add('heal');
+                floater.textContent = `+${amount}`;
+            } else {
+                return; // No animation for 0
+            }
+            
+            floater.style.left = rect.left + rect.width / 2 + 'px';
+            floater.style.top = rect.top + 'px';
+            
+            document.body.appendChild(floater);
+            setTimeout(() => floater.remove(), 1200);
+        }
+
+        function playSound(type) {
+            if (!window.AudioContext && !window.webkitAudioContext) return;
+            
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            switch(type) {
+                case 'hit':
+                    // Suono di colpo potenziato - effetto esplosivo
+                    const hitOsc = audioContext.createOscillator();
+                    const hitGain = audioContext.createGain();
+                    const hitNoise = audioContext.createBufferSource();
+                    const hitNoiseGain = audioContext.createGain();
+                    
+                    // Crea rumore bianco per l'impatto
+                    const hitBuffer = audioContext.createBuffer(1, audioContext.sampleRate * 0.1, audioContext.sampleRate);
+                    const hitData = hitBuffer.getChannelData(0);
+                    for (let i = 0; i < hitBuffer.length; i++) {
+                        hitData[i] = Math.random() * 2 - 1;
+                    }
+                    hitNoise.buffer = hitBuffer;
+                    
+                    hitOsc.connect(hitGain);
+                    hitGain.connect(audioContext.destination);
+                    hitNoise.connect(hitNoiseGain);
+                    hitNoiseGain.connect(audioContext.destination);
+                    
+                    hitOsc.frequency.setValueAtTime(500, audioContext.currentTime);
+                    hitOsc.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.15);
+                    hitGain.gain.setValueAtTime(0.4, audioContext.currentTime);
+                    hitGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+                    hitNoiseGain.gain.setValueAtTime(0.3, audioContext.currentTime);
+                    hitNoiseGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.08);
+                    
+                    hitOsc.type = 'sawtooth';
+                    hitOsc.start(audioContext.currentTime);
+                    hitOsc.stop(audioContext.currentTime + 0.15);
+                    hitNoise.start(audioContext.currentTime);
+                    hitNoise.stop(audioContext.currentTime + 0.08);
+                    break;
+                    
+                case 'heal':
+                    // Suono di cura magico - arpeggio ascendente con riverbero
+                    const healFreqs = [261.63, 329.63, 392.00, 523.25]; // C4, E4, G4, C5
+                    healFreqs.forEach((freq, i) => {
+                        const osc = audioContext.createOscillator();
+                        const gain = audioContext.createGain();
+                        osc.connect(gain);
+                        gain.connect(audioContext.destination);
+                        osc.frequency.value = freq;
+                        osc.type = 'sine';
+                        const delay = i * 0.08;
+                        gain.gain.setValueAtTime(0.2, audioContext.currentTime + delay);
+                        gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + delay + 0.4);
+                        osc.start(audioContext.currentTime + delay);
+                        osc.stop(audioContext.currentTime + delay + 0.4);
+                    });
+                    break;
+                    
+                case 'elimination':
+                    // Suono di eliminazione epico - discesa drammatica
+                    const elimOsc1 = audioContext.createOscillator();
+                    const elimOsc2 = audioContext.createOscillator();
+                    const elimGain = audioContext.createGain();
+                    
+                    elimOsc1.connect(elimGain);
+                    elimOsc2.connect(elimGain);
+                    elimGain.connect(audioContext.destination);
+                    
+                    elimOsc1.frequency.setValueAtTime(800, audioContext.currentTime);
+                    elimOsc1.frequency.exponentialRampToValueAtTime(40, audioContext.currentTime + 0.6);
+                    elimOsc2.frequency.setValueAtTime(400, audioContext.currentTime);
+                    elimOsc2.frequency.exponentialRampToValueAtTime(20, audioContext.currentTime + 0.6);
+                    
+                    elimGain.gain.setValueAtTime(0.5, audioContext.currentTime);
+                    elimGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.6);
+                    
+                    elimOsc1.type = 'sawtooth';
+                    elimOsc2.type = 'square';
+                    elimOsc1.start(audioContext.currentTime);
+                    elimOsc2.start(audioContext.currentTime);
+                    elimOsc1.stop(audioContext.currentTime + 0.6);
+                    elimOsc2.stop(audioContext.currentTime + 0.6);
+                    break;
+                    
+                case 'revive':
+                    // Suono di rianimazione celestiale - campane magiche
+                    const reviveFreqs = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+                    reviveFreqs.forEach((freq, i) => {
+                        const osc = audioContext.createOscillator();
+                        const gain = audioContext.createGain();
+                        osc.connect(gain);
+                        gain.connect(audioContext.destination);
+                        osc.frequency.value = freq;
+                        osc.type = 'triangle';
+                        const delay = i * 0.1;
+                        gain.gain.setValueAtTime(0.25, audioContext.currentTime + delay);
+                        gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + delay + 0.5);
+                        osc.start(audioContext.currentTime + delay);
+                        osc.stop(audioContext.currentTime + delay + 0.5);
+                    });
+                    break;
+                    
+                case 'poker':
+                    // Suono di vittoria epico - fanfara orchestrale
+                    const victorySequence = [
+                        { freq: 523.25, time: 0 },     // C5
+                        { freq: 659.25, time: 0.12 },  // E5
+                        { freq: 783.99, time: 0.24 },  // G5
+                        { freq: 1046.50, time: 0.36 }, // C6
+                        { freq: 1318.51, time: 0.48 }  // E6
+                    ];
+                    
+                    victorySequence.forEach(note => {
+                        const osc1 = audioContext.createOscillator();
+                        const osc2 = audioContext.createOscillator();
+                        const gain = audioContext.createGain();
+                        
+                        osc1.connect(gain);
+                        osc2.connect(gain);
+                        gain.connect(audioContext.destination);
+                        
+                        osc1.frequency.value = note.freq;
+                        osc2.frequency.value = note.freq * 1.5;
+                        osc1.type = 'sine';
+                        osc2.type = 'triangle';
+                        
+                        gain.gain.setValueAtTime(0.35, audioContext.currentTime + note.time);
+                        gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + note.time + 0.4);
+                        
+                        osc1.start(audioContext.currentTime + note.time);
+                        osc2.start(audioContext.currentTime + note.time);
+                        osc1.stop(audioContext.currentTime + note.time + 0.4);
+                        osc2.stop(audioContext.currentTime + note.time + 0.4);
+                    });
+                    return;
+            }
+        }
+        
+        function screenFlash(type) {
+            const flash = document.createElement('div');
+            flash.className = `screen-flash ${type}`;
+            document.body.appendChild(flash);
+            
+            setTimeout(() => flash.remove(), 1500);
+            
+            // Add shake effect for damage
+            if (type === 'damage') {
+                document.body.classList.add('shake');
+                setTimeout(() => document.body.classList.remove('shake'), 500);
+            }
+        }
+        
+        function createParticles(x, y, type) {
+            const particles = type === 'damage' ? ['💥', '💢', '⚡'] : 
+                             type === 'heal' ? ['💚', '✨', '💫'] :
+                             ['🌟', '✨', '⭐'];
+            
+            const count = type === 'revive' ? 12 : 8;
+            
+            for (let i = 0; i < count; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.textContent = particles[Math.floor(Math.random() * particles.length)];
+                
+                const angle = (360 / count) * i;
+                const distance = 100 + Math.random() * 50;
+                const tx = Math.cos(angle * Math.PI / 180) * distance;
+                const ty = Math.sin(angle * Math.PI / 180) * distance;
+                
+                particle.style.left = x + 'px';
+                particle.style.top = y + 'px';
+                particle.style.setProperty('--tx', tx + 'px');
+                particle.style.setProperty('--ty', ty + 'px');
+                
+                document.body.appendChild(particle);
+                
+                setTimeout(() => particle.remove(), 1500);
+            }
+        }
+
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                if (!gameState.startTime) return;
+                
+                const elapsed = Date.now() - gameState.startTime;
+                const minutes = Math.floor(elapsed / 60000);
+                const seconds = Math.floor((elapsed % 60000) / 1000);
+                
+                document.getElementById('timer').textContent = 
+                    `Tempo: ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        // Master Controls
+        function reverseDirection() {
+            if (!gameState.isMaster) return;
+            
+            const newDirection = gameState.direction === 'clockwise' ? 'counterclockwise' : 'clockwise';
+            database.ref('games/' + gameState.gameCode).update({ direction: newDirection });
+            
+            gameState.history.push('⭮ Direzione invertita');
+            database.ref('games/' + gameState.gameCode + '/history').set(gameState.history);
+        }
+        
+        function rollbackLastTurn() {
+            if (!gameState.isMaster) return;
+            
+            if (!gameState.previousState) {
+                alert('Nessuna azione da annullare!');
+                return;
+            }
+            
+            if (!confirm('Vuoi annullare l\'ultima giocata e far ripetere il turno?')) return;
+            
+            // Restore previous state
+            gameState.players = gameState.previousState.players;
+            gameState.currentTurn = gameState.previousState.currentTurn;
+            gameState.history = gameState.previousState.history;
+            gameState.stats = gameState.previousState.stats;
+            
+            gameState.history.push('↩️ Ultima giocata annullata dal Master');
+            
+            // Update Firebase
+            database.ref('games/' + gameState.gameCode).update({
+                players: gameState.players,
+                currentTurn: gameState.currentTurn,
+                history: gameState.history,
+                stats: gameState.stats
+            });
+            
+            // Clear previous state
+            gameState.previousState = null;
+        }
+
+        function changeTurn() {
+            if (!gameState.isMaster) return;
+            
+            const nextTurnIndex = parseInt(document.getElementById('next-turn-player').value);
+            database.ref('games/' + gameState.gameCode).update({ currentTurn: nextTurnIndex });
+            
+            const playerName = gameState.players[nextTurnIndex].name;
+            gameState.history.push(`⏭️ Turno cambiato a ${playerName}`);
+            database.ref('games/' + gameState.gameCode + '/history').set(gameState.history);
+        }
+
+        function modifyHP(type) {
+            if (!gameState.isMaster) return;
+            
+            const selectedOptions = document.getElementById('target-players').selectedOptions;
+            const amount = parseInt(document.getElementById('hp-amount').value);
+            
+            if (!amount || amount <= 0) {
+                alert('Inserisci un valore valido!');
+                return;
+            }
+            
+            if (selectedOptions.length === 0) {
+                alert('Seleziona almeno un giocatore!');
+                return;
+            }
+            
+            const playerIndices = Array.from(selectedOptions).map(opt => parseInt(opt.value));
+            
+            playerIndices.forEach(playerIndex => {
+                const player = gameState.players[playerIndex];
+                
+                // Apply multiplier
+                const multiplier = player.multiplier || 1;
+                const actualAmount = Math.ceil(amount * multiplier); // Arrotonda per eccesso
+                
+                if (type === 'damage') {
+                    // Check immortality
+                    if (player.isImmortal) {
+                        gameState.history.push(`⭐ ${player.name} è immortale e non subisce danni! (Master)`);
+                    } else {
+                        // Check for damage conversion effects (same as in applyResult)
+                        let shouldConvertToHeal = false;
+                        let conversionReason = '';
+                        
+                        if (player.damageToHeal) {
+                            shouldConvertToHeal = true;
+                            conversionReason = '💫 Conversione Danni→Cure';
+                        }
+                        else if (player.sunArmor && actualAmount % 2 !== 0) {
+                            shouldConvertToHeal = true;
+                            conversionReason = `☀️ Armatura del Sole (${actualAmount} dispari)`;
+                        }
+                        else if (player.moonArmor && actualAmount % 2 === 0) {
+                            shouldConvertToHeal = true;
+                            conversionReason = `🌙 Armatura della Luna (${actualAmount} pari)`;
+                        }
+                        
+                        if (shouldConvertToHeal) {
+                            // Convert damage to healing
+                            player.hp += actualAmount;
+                            gameState.history.push(`${conversionReason}: ${player.name} si cura di ${actualAmount} HP invece di subirli! (Master)`);
+                            animateHP(playerIndex, actualAmount);
+                            playSound('heal');
+                        } else {
+                            // Apply damage normally
+                            player.hp = Math.max(0, player.hp - actualAmount);
+                            
+                            // Check Checkmate - auto-eliminate at exact HP value
+                            if (player.checkmateHP && player.hp === player.checkmateHP && !player.isEliminated) {
+                                player.hp = 0;
+                                player.isEliminated = true;
+                                gameState.history.push(`♟️ ${player.name} è stato eliminato da Scacco Matto! (HP = ${player.checkmateHP})`);
+                                playSound('elimination');
+                            }
+                            // Check Kraken Mark - auto-eliminate at 10 HP or less
+                            else if (player.krakenMark && player.hp <= 10 && player.hp > 0 && !player.isEliminated) {
+                                player.hp = 0;
+                                player.isEliminated = true;
+                                gameState.history.push(`🐙 ${player.name} è stato eliminato dal Marchio del Kraken! (HP ≤ 10)`);
+                                playSound('elimination');
+                            } else if (player.hp === 0) {
+                                player.isEliminated = true;
+                            }
+                            
+                            animateHP(playerIndex, -actualAmount);
+                            if (multiplier !== 1) {
+                                gameState.history.push(`💥 ${player.name} riceve ${actualAmount} danni (x${multiplier}) (Master)`);
+                            } else {
+                                gameState.history.push(`💥 ${player.name} riceve ${actualAmount} danni (Master)`);
+                            }
+                        }
+                    }
+                } else {
+                    player.hp += actualAmount;
+                    if (player.isEliminated) player.isEliminated = false;
+                    animateHP(playerIndex, actualAmount);
+                    if (multiplier !== 1) {
+                        gameState.history.push(`💚 ${player.name} recupera ${actualAmount} HP (x${multiplier}) (Master)`);
+                    } else {
+                        gameState.history.push(`💚 ${player.name} recupera ${actualAmount} HP (Master)`);
+                    }
+                }
+            });
+            
+            database.ref('games/' + gameState.gameCode).update({
+                players: gameState.players,
+                history: gameState.history
+            });
+            
+            document.getElementById('hp-amount').value = '';
+        }
+
+        function revivePlayer() {
+            if (!gameState.isMaster) return;
+            
+            const selectedOptions = document.getElementById('target-players').selectedOptions;
+            
+            if (selectedOptions.length === 0) {
+                alert('Seleziona almeno un giocatore da rianimare!');
+                return;
+            }
+            
+            const playerIndices = Array.from(selectedOptions).map(opt => parseInt(opt.value));
+            
+            playerIndices.forEach(playerIndex => {
+                const player = gameState.players[playerIndex];
+                
+                if (!player.isEliminated) {
+                    return; // Skip non-eliminated players
+                }
+                
+                player.isEliminated = false;
+                player.hp = 20;
+                
+                animateHP(playerIndex, 20);
+                gameState.history.push(`🔄 ${player.name} è stato rianimato con 20 HP`);
+            });
+            
+            playSound('revive');
+            screenFlash('revive');
+            createParticles(window.innerWidth / 2, window.innerHeight / 2, 'revive');
+            
+            database.ref('games/' + gameState.gameCode).update({
+                players: gameState.players,
+                history: gameState.history
+            });
+        }
+
+        function endGame() {
+            if (!gameState.isMaster) return;
+            
+            if (!confirm('Sei sicuro di voler terminare la partita?')) return;
+            
+            const sorted = [...gameState.players].sort((a, b) => b.hp - a.hp);
+            const winner = sorted[0];
+            
+            gameState.history.push(`🏁 Partita terminata. Vincitore: ${winner.name} con ${winner.hp} HP`);
+            
+            database.ref('games/' + gameState.gameCode).update({
+                history: gameState.history,
+                gameEnded: true,
+                winner: winner.name
+            });
+            
+            // Show winner notification to all players
+            setTimeout(() => {
+                const isYou = winner.name === gameState.playerName;
+                showWinnerNotification(winner.name, isYou);
+            }, 500);
+        }
+
+        function swapHP() {
+            if (!gameState.isMaster) return;
+            
+            const player1Index = parseInt(document.getElementById('swap-player-1').value);
+            const player2Index = parseInt(document.getElementById('swap-player-2').value);
+            
+            if (player1Index === player2Index) {
+                alert('Seleziona due giocatori diversi!');
+                return;
+            }
+            
+            const player1 = gameState.players[player1Index];
+            const player2 = gameState.players[player2Index];
+            
+            // Swap HP values
+            const tempHP = player1.hp;
+            player1.hp = player2.hp;
+            player2.hp = tempHP;
+            
+            gameState.history.push(`🔄 ${player1.name} e ${player2.name} hanno scambiato HP (${player2.hp} ↔ ${player1.hp})`);
+            
+            database.ref('games/' + gameState.gameCode).update({
+                players: gameState.players,
+                history: gameState.history
+            });
+            
+            // Animate both players
+            animateHP(player1Index, 0);
+            animateHP(player2Index, 0);
+        }
+
+        function newGame() {
+            if (!gameState.isMaster) return;
+            
+            if (!confirm('Vuoi iniziare una nuova partita? Gli HP saranno resettati.')) return;
+            
+            // Use the initial HP that was set when the game was created
+            const resetHP = gameState.initialHP || 70;
+            
+            // Reset all players
+            gameState.players.forEach(player => {
+                player.hp = resetHP;
+                player.isEliminated = false;
+            });
+            
+            // Reset game state
+            gameState.currentTurn = 0;
+            gameState.direction = 'clockwise';
+            gameState.history = ['🎮 Nuova partita iniziata!'];
+            gameState.startTime = Date.now();
+            
+            database.ref('games/' + gameState.gameCode).update({
+                players: gameState.players,
+                currentTurn: 0,
+                direction: 'clockwise',
+                history: gameState.history,
+                startTime: gameState.startTime,
+                gameEnded: false,
+                winner: null
+            });
+            
+            // Restart timer
+            if (timerInterval) {
+                clearInterval(timerInterval);
+            }
+            startTimer();
+        }
+        
+        function showQRModal() {
+            if (!gameState.isMaster) return;
+            
+            const selectedIndex = parseInt(document.getElementById('qr-player-select').value);
+            const selectedPlayer = gameState.players[selectedIndex];
+            
+            if (!selectedPlayer) {
+                alert('Seleziona un giocatore!');
+                return;
+            }
+            
+            const modal = document.getElementById('qr-modal');
+            const qrcodeContainer = document.getElementById('qrcode-modal');
+            const gameCodeDisplay = document.getElementById('modal-game-code');
+            
+            // Clear previous QR code
+            qrcodeContainer.innerHTML = '';
+            
+            // Generate new QR code with player name
+            const gameUrl = window.location.origin + window.location.pathname + '?game=' + gameState.gameCode + '&player=' + encodeURIComponent(selectedPlayer.name);
+            new QRCode(qrcodeContainer, {
+                text: gameUrl,
+                width: 256,
+                height: 256,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+            
+            // Display game code and player name
+            gameCodeDisplay.textContent = gameState.gameCode + ' - ' + selectedPlayer.name;
+            
+            // Show modal
+            modal.classList.add('show');
+        }
+        
+        function closeQRModal() {
+            const modal = document.getElementById('qr-modal');
+            modal.classList.remove('show');
+        }
+        
+        function toggleImmortality() {
+            if (!gameState.isMaster) return;
+            
+            const select = document.getElementById('immortal-players');
+            const selectedIndices = Array.from(select.selectedOptions).map(opt => parseInt(opt.value));
+            
+            if (selectedIndices.length === 0) {
+                alert('Seleziona almeno un giocatore!');
+                return;
+            }
+            
+            // Toggle immortality for selected players
+            selectedIndices.forEach(index => {
+                const player = gameState.players[index];
+                player.isImmortal = !player.isImmortal;
+                
+                // Animazione quando viene attivata
+                if (player.isImmortal) {
+                    animateHP(index, 0, 'immortal');
+                }
+                
+                // Mark as temporary effect
+                if (!player.temporaryEffects) {
+                    player.temporaryEffects = {};
+                }
+                player.temporaryEffects.immortal = player.isImmortal;
+            });
+            
+            // Update Firebase
+            database.ref('games/' + gameState.gameCode + '/players').set(gameState.players);
+            
+            // Add to history
+            const playerNames = selectedIndices.map(i => gameState.players[i].name).join(', ');
+            const status = gameState.players[selectedIndices[0]].isImmortal ? 'attivata' : 'disattivata';
+            gameState.history.push(`⭐ Immortalità ${status} per: ${playerNames} (temp)`);
+            database.ref('games/' + gameState.gameCode + '/history').set(gameState.history);
+        }
+        
+        function setMultiplier(multiplierValue) {
+            if (!gameState.isMaster) return;
+            
+            const select = document.getElementById('multiplier-players');
+            const selectedIndices = Array.from(select.selectedOptions).map(opt => parseInt(opt.value));
+            
+            if (selectedIndices.length === 0) {
+                alert('Seleziona almeno un giocatore!');
+                return;
+            }
+            
+            // Set multiplier for selected players
+            const currentPlayerIndex = gameState.currentTurn;
+            
+            selectedIndices.forEach(index => {
+                const player = gameState.players[index];
+                player.multiplier = multiplierValue;
+                player.multiplierAppliedBy = currentPlayerIndex; // Salva chi ha applicato il moltiplicatore
+                
+                // Animazione moltiplicatore
+                animateHP(index, 0, 'multiplier');
+                
+                // Mark as temporary effect
+                if (!player.temporaryEffects) {
+                    player.temporaryEffects = {};
+                }
+                player.temporaryEffects.multiplier = true;
+            });
+            
+            // Update Firebase
+            database.ref('games/' + gameState.gameCode + '/players').set(gameState.players);
+            
+            // Add to history
+            const playerNames = selectedIndices.map(i => gameState.players[i].name).join(', ');
+            const applierName = gameState.players[currentPlayerIndex].name;
+            const multiplierText = multiplierValue === 0.5 ? '0.5 (metà danni)' : '2 (danni doppi)';
+            gameState.history.push(`✨ ${applierName} applica moltiplicatore x${multiplierText} a: ${playerNames} (fino al suo prossimo turno)`);
+            database.ref('games/' + gameState.gameCode + '/history').set(gameState.history);
+        }
+        
+        function removeMultiplier() {
+            if (!gameState.isMaster) return;
+            
+            const select = document.getElementById('multiplier-players');
+            const selectedIndices = Array.from(select.selectedOptions).map(opt => parseInt(opt.value));
+            
+            if (selectedIndices.length === 0) {
+                alert('Seleziona almeno un giocatore!');
+                return;
+            }
+            
+            // Remove multiplier (set to 1) for selected players
+            selectedIndices.forEach(index => {
+                const player = gameState.players[index];
+                player.multiplier = 1;
+                player.multiplierAppliedBy = null;
+                if (player.temporaryEffects) {
+                    player.temporaryEffects.multiplier = false;
+                }
+            });
+            
+            // Update Firebase
+            database.ref('games/' + gameState.gameCode + '/players').set(gameState.players);
+            
+            // Add to history
+            const playerNames = selectedIndices.map(i => gameState.players[i].name).join(', ');
+            gameState.history.push(`❌ Moltiplicatore rimosso per: ${playerNames}`);
+            database.ref('games/' + gameState.gameCode + '/history').set(gameState.history);
+        }
+        
+        function toggleSkipTurn() {
+            if (!gameState.isMaster) return;
+            
+            const select = document.getElementById('skip-turn-players');
+            const selectedIndices = Array.from(select.selectedOptions).map(opt => parseInt(opt.value));
+            
+            if (selectedIndices.length === 0) {
+                alert('Seleziona almeno un giocatore!');
+                return;
+            }
+            
+            // Toggle skip turn for selected players
+            selectedIndices.forEach(index => {
+                const player = gameState.players[index];
+                player.skipTurn = !player.skipTurn;
+                
+                // Mark as temporary effect
+                if (!player.temporaryEffects) {
+                    player.temporaryEffects = {};
+                }
+                player.temporaryEffects.skipTurn = player.skipTurn;
+            });
+            
+            // Update Firebase
+            database.ref('games/' + gameState.gameCode + '/players').set(gameState.players);
+            
+            // Add to history
+            const playerNames = selectedIndices.map(i => gameState.players[i].name).join(', ');
+            const status = gameState.players[selectedIndices[0]].skipTurn ? 'attivato' : 'disattivato';
+            gameState.history.push(`⏭️ Salta turno ${status} per: ${playerNames}`);
+            database.ref('games/' + gameState.gameCode + '/history').set(gameState.history);
+        }
+        
+        function setCustomDice() {
+            if (!gameState.isMaster) return;
+            
+            const select = document.getElementById('custom-dice-players');
+            const selectedIndices = Array.from(select.selectedOptions).map(opt => parseInt(opt.value));
+            const diceValue = parseInt(document.getElementById('custom-dice-value').value);
+            
+            if (selectedIndices.length === 0) {
+                alert('Seleziona almeno un giocatore!');
+                return;
+            }
+            
+            if (!diceValue || diceValue < 1 || diceValue > 6) {
+                alert('Inserisci un numero di dadi valido (1-6)!');
+                return;
+            }
+            
+            // Set custom dice for selected players
+            selectedIndices.forEach(index => {
+                const player = gameState.players[index];
+                player.customDiceCount = diceValue;
+                
+                // Mark as temporary effect
+                if (!player.temporaryEffects) {
+                    player.temporaryEffects = {};
+                }
+                player.temporaryEffects.customDice = true;
+            });
+            
+            // Update Firebase
+            database.ref('games/' + gameState.gameCode + '/players').set(gameState.players);
+            
+            // Add to history
+            const playerNames = selectedIndices.map(i => gameState.players[i].name).join(', ');
+            gameState.history.push(`🎲 Dadi personalizzati (${diceValue}) assegnati a: ${playerNames} (temp)`);
+            database.ref('games/' + gameState.gameCode + '/history').set(gameState.history);
+        }
+        
+        function removeCustomDice() {
+            if (!gameState.isMaster) return;
+            
+            const select = document.getElementById('custom-dice-players');
+            const selectedIndices = Array.from(select.selectedOptions).map(opt => parseInt(opt.value));
+            
+            if (selectedIndices.length === 0) {
+                alert('Seleziona almeno un giocatore!');
+                return;
+            }
+            
+            // Remove custom dice for selected players
+            selectedIndices.forEach(index => {
+                const player = gameState.players[index];
+                player.customDiceCount = null;
+                if (player.temporaryEffects) {
+                    player.temporaryEffects.customDice = false;
+                }
+            });
+            
+            // Update Firebase
+            database.ref('games/' + gameState.gameCode + '/players').set(gameState.players);
+            
+            // Add to history
+            const playerNames = selectedIndices.map(i => gameState.players[i].name).join(', ');
+            gameState.history.push(`❌ Dadi personalizzati rimossi per: ${playerNames}`);
+            database.ref('games/' + gameState.gameCode + '/history').set(gameState.history);
+        }
+        
+        function resetTemporaryEffects(playerIndex) {
+            const player = gameState.players[playerIndex];
+            if (!player || !player.temporaryEffects) return;
+            
+            let resetMessage = [];
+            
+            // Reset immortality if temporary (only for the player who just played)
+            if (player.temporaryEffects.immortal && player.isImmortal) {
+                player.isImmortal = false;
+                resetMessage.push('immortalità');
+            }
+            
+            // Reset multipliers for ALL players if this player applied them
+            // (moltiplicatori durano fino al turno del giocatore che li ha applicati)
+            let multiplierResetPlayers = [];
+            gameState.players.forEach((p, index) => {
+                if (p.multiplierAppliedBy === playerIndex && p.multiplier !== 1) {
+                    multiplierResetPlayers.push(p.name);
+                    p.multiplier = 1;
+                    p.multiplierAppliedBy = null;
+                    if (p.temporaryEffects) {
+                        p.temporaryEffects.multiplier = false;
+                    }
+                }
+            });
+            
+            if (multiplierResetPlayers.length > 0) {
+                gameState.history.push(`⏱️ Moltiplicatori rimossi da: ${multiplierResetPlayers.join(', ')} (fine effetto di ${player.name})`);
+            }
+            
+            // Reset skip turn if temporary (but only after it was skipped)
+            // Skip turn will be handled separately in getNextActiveTurn
+            
+            // Reset custom dice if temporary (only for the player who just played)
+            if (player.temporaryEffects.customDice && player.customDiceCount) {
+                player.customDiceCount = null;
+                resetMessage.push('dadi personalizzati');
+            }
+            
+            // Reset damage-to-heal if temporary
+            if (player.temporaryEffects.damageToHeal && player.damageToHeal) {
+                player.damageToHeal = false;
+                resetMessage.push('conversione danni→cure');
+            }
+            
+            // Reset sun armor if temporary
+            if (player.temporaryEffects.sunArmor && player.sunArmor) {
+                player.sunArmor = false;
+                resetMessage.push('armatura del sole');
+            }
+            
+            // Reset moon armor if temporary
+            if (player.temporaryEffects.moonArmor && player.moonArmor) {
+                player.moonArmor = false;
+                resetMessage.push('armatura della luna');
+            }
+            
+            // Clear temporary flags for the player who just played
+            player.temporaryEffects = {
+                immortal: false,
+                multiplier: false,
+                skipTurn: player.temporaryEffects.skipTurn, // Mantieni skipTurn
+                customDice: false,
+                damageToHeal: false,
+                sunArmor: false,
+                moonArmor: false
+            };
+            
+            // Add history message if something was reset for this player
+            if (resetMessage.length > 0) {
+                gameState.history.push(`⏱️ ${player.name}: reset ${resetMessage.join(', ')}`);
+            }
+        }
+        
+        function toggleKrakenMark() {
+            if (!gameState.isMaster) return;
+            
+            const select = document.getElementById('kraken-mark-players');
+            const selectedIndices = Array.from(select.selectedOptions).map(opt => parseInt(opt.value));
+            
+            if (selectedIndices.length === 0) {
+                alert('Seleziona almeno un giocatore!');
+                return;
+            }
+            
+            // Toggle kraken mark for selected players
+            selectedIndices.forEach(index => {
+                const player = gameState.players[index];
+                player.krakenMark = !player.krakenMark;
+                if (player.krakenMark) {
+                    animateHP(index, 0, 'kraken'); // Animazione Kraken!
+                }
+            });
+            
+            // Update Firebase
+            database.ref('games/' + gameState.gameCode + '/players').set(gameState.players);
+            
+            // Add to history
+            const playerNames = selectedIndices.map(i => gameState.players[i].name).join(', ');
+            const status = gameState.players[selectedIndices[0]].krakenMark ? 'applicato' : 'rimosso';
+            gameState.history.push(`🐙 Marchio del Kraken ${status} a: ${playerNames}`);
+            database.ref('games/' + gameState.gameCode + '/history').set(gameState.history);
+        }
+        
+        function setCheckmate() {
+            if (!gameState.isMaster) return;
+            
+            const select = document.getElementById('checkmate-players');
+            const selectedIndices = Array.from(select.selectedOptions).map(opt => parseInt(opt.value));
+            const checkmateValue = parseInt(document.getElementById('checkmate-value').value);
+            
+            if (selectedIndices.length === 0) {
+                alert('Seleziona almeno un giocatore!');
+                return;
+            }
+            
+            if (!checkmateValue || checkmateValue < 1 || checkmateValue > 100) {
+                alert('Inserisci un valore HP valido (1-100)!');
+                return;
+            }
+            
+            // Set checkmate for selected players
+            selectedIndices.forEach(index => {
+                const player = gameState.players[index];
+                player.checkmateHP = checkmateValue;
+                animateHP(index, 0, 'checkmate'); // Animazione Checkmate!
+            });
+            
+            // Update Firebase
+            database.ref('games/' + gameState.gameCode + '/players').set(gameState.players);
+            
+            // Add to history
+            const playerNames = selectedIndices.map(i => gameState.players[i].name).join(', ');
+            gameState.history.push(`♟️ Scacco Matto (${checkmateValue} HP) applicato a: ${playerNames}`);
+            database.ref('games/' + gameState.gameCode + '/history').set(gameState.history);
+        }
+        
+        function removeCheckmate() {
+            if (!gameState.isMaster) return;
+            
+            const select = document.getElementById('checkmate-players');
+            const selectedIndices = Array.from(select.selectedOptions).map(opt => parseInt(opt.value));
+            
+            if (selectedIndices.length === 0) {
+                alert('Seleziona almeno un giocatore!');
+                return;
+            }
+            
+            // Remove checkmate for selected players
+            selectedIndices.forEach(index => {
+                const player = gameState.players[index];
+                player.checkmateHP = null;
+            });
+            
+            // Update Firebase
+            database.ref('games/' + gameState.gameCode + '/players').set(gameState.players);
+            
+            // Add to history
+            const playerNames = selectedIndices.map(i => gameState.players[i].name).join(', ');
+            gameState.history.push(`❌ Scacco Matto rimosso da: ${playerNames}`);
+            database.ref('games/' + gameState.gameCode + '/history').set(gameState.history);
+        }
+        
+        function toggleDamageToHeal() {
+            if (!gameState.isMaster) return;
+            const select = document.getElementById('damage-to-heal-players');
+            const selectedIndices = Array.from(select.selectedOptions).map(opt => parseInt(opt.value));
+            if (selectedIndices.length === 0) { alert('Seleziona almeno un giocatore!'); return; }
+            selectedIndices.forEach(index => {
+                const player = gameState.players[index];
+                player.damageToHeal = !player.damageToHeal;
+                if (player.damageToHeal) {
+                    animateHP(index, 0, 'conversion'); // Animazione conversione!
+                }
+                if (!player.temporaryEffects) player.temporaryEffects = {};
+                player.temporaryEffects.damageToHeal = player.damageToHeal;
+            });
+            database.ref('games/' + gameState.gameCode + '/players').set(gameState.players);
+            const playerNames = selectedIndices.map(i => gameState.players[i].name).join(', ');
+            const status = gameState.players[selectedIndices[0]].damageToHeal ? 'attivata' : 'disattivata';
+            gameState.history.push(`💫 Conversione Danni→Cure ${status} per: ${playerNames} (temp)`);
+            database.ref('games/' + gameState.gameCode + '/history').set(gameState.history);
+        }
+        
+        function toggleSunArmor() {
+            if (!gameState.isMaster) return;
+            const select = document.getElementById('sun-armor-players');
+            const selectedIndices = Array.from(select.selectedOptions).map(opt => parseInt(opt.value));
+            if (selectedIndices.length === 0) { alert('Seleziona almeno un giocatore!'); return; }
+            selectedIndices.forEach(index => {
+                const player = gameState.players[index];
+                player.sunArmor = !player.sunArmor;
+                if (player.sunArmor) {
+                    animateHP(index, 0, 'armor'); // Animazione armatura!
+                }
+                if (!player.temporaryEffects) player.temporaryEffects = {};
+                player.temporaryEffects.sunArmor = player.sunArmor;
+            });
+            database.ref('games/' + gameState.gameCode + '/players').set(gameState.players);
+            const playerNames = selectedIndices.map(i => gameState.players[i].name).join(', ');
+            const status = gameState.players[selectedIndices[0]].sunArmor ? 'indossata' : 'rimossa';
+            gameState.history.push(`☀️ Armatura del Sole ${status} da: ${playerNames} (temp)`);
+            database.ref('games/' + gameState.gameCode + '/history').set(gameState.history);
+        }
+        
+        function toggleMoonArmor() {
+            if (!gameState.isMaster) return;
+            const select = document.getElementById('moon-armor-players');
+            const selectedIndices = Array.from(select.selectedOptions).map(opt => parseInt(opt.value));
+            if (selectedIndices.length === 0) { alert('Seleziona almeno un giocatore!'); return; }
+            selectedIndices.forEach(index => {
+                const player = gameState.players[index];
+                player.moonArmor = !player.moonArmor;
+                if (player.moonArmor) {
+                    animateHP(index, 0, 'armor'); // Animazione armatura!
+                }
+                if (!player.temporaryEffects) player.temporaryEffects = {};
+                player.temporaryEffects.moonArmor = player.moonArmor;
+            });
+            database.ref('games/' + gameState.gameCode + '/players').set(gameState.players);
+            const playerNames = selectedIndices.map(i => gameState.players[i].name).join(', ');
+            const status = gameState.players[selectedIndices[0]].moonArmor ? 'indossata' : 'rimossa';
+            gameState.history.push(`🌙 Armatura della Luna ${status} da: ${playerNames} (temp)`);
+            database.ref('games/' + gameState.gameCode + '/history').set(gameState.history);
+        }
+    </script>
+</body>
+</html>
