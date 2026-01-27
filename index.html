@@ -705,117 +705,231 @@
         }
 
         @keyframes damage {
-            0%, 100% { transform: translateX(0) rotate(0deg); }
-            15% { transform: translateX(-15px) rotate(-5deg); }
-            30% { transform: translateX(15px) rotate(5deg); }
-            45% { transform: translateX(-10px) rotate(-3deg); }
-            60% { transform: translateX(10px) rotate(3deg); }
-            75% { transform: translateX(-5px) rotate(-1deg); }
+            0% { transform: translateX(0) rotate(0deg); background: rgba(255, 0, 0, 0); }
+            15% { transform: translateX(-15px) rotate(-5deg); background: rgba(255, 0, 0, 0.3); }
+            30% { transform: translateX(15px) rotate(5deg); background: rgba(255, 0, 0, 0.2); }
+            45% { transform: translateX(-10px) rotate(-3deg); background: rgba(255, 0, 0, 0.25); }
+            60% { transform: translateX(10px) rotate(3deg); background: rgba(255, 0, 0, 0.15); }
+            75% { transform: translateX(-5px) rotate(-1deg); background: rgba(255, 0, 0, 0.1); }
+            100% { transform: translateX(0) rotate(0deg); background: rgba(255, 0, 0, 0); }
         }
 
         @keyframes heal {
-            0%, 100% { transform: scale(1); }
-            25% { transform: scale(1.15) rotate(3deg); }
-            50% { transform: scale(1.08) rotate(-3deg); }
-            75% { transform: scale(1.12) rotate(2deg); }
+            0% { transform: scale(1); background: rgba(78, 204, 163, 0); }
+            25% { transform: scale(1.15) rotate(3deg); background: rgba(78, 204, 163, 0.35); }
+            50% { transform: scale(1.08) rotate(-3deg); background: rgba(78, 204, 163, 0.25); }
+            75% { transform: scale(1.12) rotate(2deg); background: rgba(78, 204, 163, 0.3); }
+            100% { transform: scale(1); background: rgba(78, 204, 163, 0); }
         }
 
         @keyframes immortal-pulse {
-            0%, 100% { 
+            0% { 
                 transform: scale(1);
-                box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+                background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 237, 78, 0.1) 100%);
+                border: 3px solid rgba(255, 215, 0, 0.5);
+            }
+            25% { 
+                transform: scale(1.12);
+                background: linear-gradient(135deg, rgba(255, 215, 0, 0.4) 0%, rgba(255, 237, 78, 0.4) 100%);
+                border: 3px solid rgba(255, 215, 0, 1);
             }
             50% { 
-                transform: scale(1.05);
-                box-shadow: 0 0 40px rgba(255, 215, 0, 0.9), 0 0 60px rgba(255, 215, 0, 0.5);
+                transform: scale(1.08);
+                background: linear-gradient(135deg, rgba(255, 215, 0, 0.3) 0%, rgba(255, 237, 78, 0.3) 100%);
+                border: 3px solid rgba(255, 215, 0, 0.8);
+            }
+            75% { 
+                transform: scale(1.12);
+                background: linear-gradient(135deg, rgba(255, 215, 0, 0.4) 0%, rgba(255, 237, 78, 0.4) 100%);
+                border: 3px solid rgba(255, 215, 0, 1);
+            }
+            100% { 
+                transform: scale(1);
+                background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 237, 78, 0.1) 100%);
+                border: 3px solid rgba(255, 215, 0, 0.5);
             }
         }
         
         @keyframes multiplier-glow {
-            0%, 100% { 
-                box-shadow: 0 0 15px rgba(255, 0, 255, 0.4);
+            0% { 
+                transform: scale(1);
+                background: linear-gradient(135deg, rgba(255, 0, 255, 0.1) 0%, rgba(138, 43, 226, 0.1) 100%);
+                border: 3px solid rgba(255, 0, 255, 0.5);
             }
-            50% { 
-                box-shadow: 0 0 30px rgba(255, 0, 255, 0.8), 0 0 50px rgba(255, 0, 255, 0.4);
+            33% { 
+                transform: scale(1.12) rotate(3deg);
+                background: linear-gradient(135deg, rgba(255, 0, 255, 0.35) 0%, rgba(138, 43, 226, 0.35) 100%);
+                border: 3px solid rgba(255, 0, 255, 1);
+            }
+            66% { 
+                transform: scale(1.08) rotate(-2deg);
+                background: linear-gradient(135deg, rgba(255, 0, 255, 0.25) 0%, rgba(138, 43, 226, 0.25) 100%);
+                border: 3px solid rgba(255, 0, 255, 0.8);
+            }
+            100% { 
+                transform: scale(1);
+                background: linear-gradient(135deg, rgba(255, 0, 255, 0.1) 0%, rgba(138, 43, 226, 0.1) 100%);
+                border: 3px solid rgba(255, 0, 255, 0.5);
             }
         }
         
         @keyframes conversion-sparkle {
-            0%, 100% { 
-                box-shadow: 0 0 20px rgba(255, 105, 180, 0.5);
+            0% { 
                 transform: scale(1) rotate(0deg);
+                background: linear-gradient(135deg, rgba(255, 105, 180, 0.1) 0%, rgba(255, 20, 147, 0.1) 100%);
+                border: 3px solid rgba(255, 105, 180, 0.5);
             }
-            33% { 
-                box-shadow: 0 0 40px rgba(255, 105, 180, 0.9), 0 0 60px rgba(255, 105, 180, 0.5);
-                transform: scale(1.08) rotate(5deg);
+            20% { 
+                transform: scale(1.18) rotate(8deg);
+                background: linear-gradient(135deg, rgba(255, 105, 180, 0.5) 0%, rgba(255, 20, 147, 0.5) 100%);
+                border: 3px solid rgba(255, 105, 180, 1);
             }
-            66% { 
-                box-shadow: 0 0 35px rgba(255, 105, 180, 0.8);
-                transform: scale(1.04) rotate(-3deg);
+            40% { 
+                transform: scale(1.12) rotate(-6deg);
+                background: linear-gradient(135deg, rgba(255, 105, 180, 0.4) 0%, rgba(255, 20, 147, 0.4) 100%);
+                border: 3px solid rgba(255, 105, 180, 0.9);
+            }
+            60% { 
+                transform: scale(1.16) rotate(5deg);
+                background: linear-gradient(135deg, rgba(255, 105, 180, 0.45) 0%, rgba(255, 20, 147, 0.45) 100%);
+                border: 3px solid rgba(255, 105, 180, 1);
+            }
+            80% { 
+                transform: scale(1.08) rotate(-3deg);
+                background: linear-gradient(135deg, rgba(255, 105, 180, 0.3) 0%, rgba(255, 20, 147, 0.3) 100%);
+                border: 3px solid rgba(255, 105, 180, 0.7);
+            }
+            100% { 
+                transform: scale(1) rotate(0deg);
+                background: linear-gradient(135deg, rgba(255, 105, 180, 0.1) 0%, rgba(255, 20, 147, 0.1) 100%);
+                border: 3px solid rgba(255, 105, 180, 0.5);
             }
         }
         
         @keyframes armor-shine {
-            0%, 100% { 
-                box-shadow: 0 0 15px rgba(255, 165, 0, 0.4);
+            0% { 
+                transform: scale(1);
+                background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 140, 0, 0.1) 100%);
+                border: 3px solid rgba(255, 165, 0, 0.5);
+            }
+            25% { 
+                transform: scale(1.12);
+                background: linear-gradient(135deg, rgba(255, 215, 0, 0.4) 0%, rgba(255, 140, 0, 0.4) 100%);
+                border: 3px solid rgba(255, 165, 0, 1);
             }
             50% { 
-                box-shadow: 0 0 35px rgba(255, 215, 0, 0.9), 0 0 50px rgba(255, 140, 0, 0.6);
+                transform: scale(1.08);
+                background: linear-gradient(135deg, rgba(255, 215, 0, 0.3) 0%, rgba(255, 140, 0, 0.3) 100%);
+                border: 3px solid rgba(255, 165, 0, 0.8);
+            }
+            75% { 
+                transform: scale(1.12);
+                background: linear-gradient(135deg, rgba(255, 215, 0, 0.4) 0%, rgba(255, 140, 0, 0.4) 100%);
+                border: 3px solid rgba(255, 165, 0, 1);
+            }
+            100% { 
+                transform: scale(1);
+                background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 140, 0, 0.1) 100%);
+                border: 3px solid rgba(255, 165, 0, 0.5);
             }
         }
         
         @keyframes kraken-pulse {
-            0%, 100% { 
-                box-shadow: 0 0 20px rgba(153, 51, 255, 0.6);
-                border-left-color: rgba(153, 51, 255, 0.8);
+            0% { 
+                transform: scale(1);
+                background: linear-gradient(135deg, rgba(153, 51, 255, 0.1) 0%, rgba(102, 0, 204, 0.1) 100%);
+                border: 3px solid rgba(153, 51, 255, 0.6);
             }
-            50% { 
-                box-shadow: 0 0 40px rgba(153, 51, 255, 1), 0 0 60px rgba(153, 51, 255, 0.6);
-                border-left-color: rgba(153, 51, 255, 1);
+            15% { 
+                transform: scale(1.15);
+                background: linear-gradient(135deg, rgba(153, 51, 255, 0.4) 0%, rgba(102, 0, 204, 0.4) 100%);
+                border: 3px solid rgba(153, 51, 255, 1);
+            }
+            30% { 
+                transform: scale(1.1);
+                background: linear-gradient(135deg, rgba(153, 51, 255, 0.35) 0%, rgba(102, 0, 204, 0.35) 100%);
+                border: 3px solid rgba(153, 51, 255, 0.9);
+            }
+            45% { 
+                transform: scale(1.15);
+                background: linear-gradient(135deg, rgba(153, 51, 255, 0.4) 0%, rgba(102, 0, 204, 0.4) 100%);
+                border: 3px solid rgba(153, 51, 255, 1);
+            }
+            60% { 
+                transform: scale(1.08);
+                background: linear-gradient(135deg, rgba(153, 51, 255, 0.3) 0%, rgba(102, 0, 204, 0.3) 100%);
+                border: 3px solid rgba(153, 51, 255, 0.8);
+            }
+            100% { 
+                transform: scale(1);
+                background: linear-gradient(135deg, rgba(153, 51, 255, 0.1) 0%, rgba(102, 0, 204, 0.1) 100%);
+                border: 3px solid rgba(153, 51, 255, 0.6);
             }
         }
         
         @keyframes checkmate-danger {
-            0%, 100% { 
-                box-shadow: 0 0 20px rgba(255, 0, 0, 0.6);
-                border-left-color: rgba(255, 0, 0, 0.8);
+            0% { 
+                transform: scale(1);
+                background: linear-gradient(135deg, rgba(255, 0, 0, 0.1) 0%, rgba(139, 0, 0, 0.1) 100%);
+                border: 3px solid rgba(255, 0, 0, 0.6);
             }
-            50% { 
-                box-shadow: 0 0 40px rgba(255, 0, 0, 1), 0 0 60px rgba(255, 0, 0, 0.6);
-                border-left-color: rgba(255, 0, 0, 1);
+            15% { 
+                transform: scale(1.2);
+                background: linear-gradient(135deg, rgba(255, 0, 0, 0.5) 0%, rgba(139, 0, 0, 0.5) 100%);
+                border: 3px solid rgba(255, 0, 0, 1);
+            }
+            30% { 
+                transform: scale(1.15);
+                background: linear-gradient(135deg, rgba(255, 0, 0, 0.4) 0%, rgba(139, 0, 0, 0.4) 100%);
+                border: 3px solid rgba(255, 0, 0, 0.9);
+            }
+            45% { 
+                transform: scale(1.2);
+                background: linear-gradient(135deg, rgba(255, 0, 0, 0.5) 0%, rgba(139, 0, 0, 0.5) 100%);
+                border: 3px solid rgba(255, 0, 0, 1);
+            }
+            60% { 
+                transform: scale(1.1);
+                background: linear-gradient(135deg, rgba(255, 0, 0, 0.35) 0%, rgba(139, 0, 0, 0.35) 100%);
+                border: 3px solid rgba(255, 0, 0, 0.8);
+            }
+            100% { 
+                transform: scale(1);
+                background: linear-gradient(135deg, rgba(255, 0, 0, 0.1) 0%, rgba(139, 0, 0, 0.1) 100%);
+                border: 3px solid rgba(255, 0, 0, 0.6);
             }
         }
 
         .animate-damage {
-            animation: damage 0.6s ease;
+            animation: damage 0.6s ease !important;
         }
 
         .animate-heal {
-            animation: heal 0.8s ease;
+            animation: heal 0.8s ease !important;
         }
         
         .animate-immortal {
-            animation: immortal-pulse 1.5s ease-in-out;
+            animation: immortal-pulse 1.5s ease-in-out !important;
         }
         
         .animate-multiplier {
-            animation: multiplier-glow 1.2s ease-in-out;
+            animation: multiplier-glow 1.2s ease-in-out !important;
         }
         
         .animate-conversion {
-            animation: conversion-sparkle 1s ease-in-out;
+            animation: conversion-sparkle 1s ease-in-out !important;
         }
         
         .animate-armor {
-            animation: armor-shine 1.2s ease-in-out;
+            animation: armor-shine 1.2s ease-in-out !important;
         }
         
         .animate-kraken {
-            animation: kraken-pulse 1s ease-in-out;
+            animation: kraken-pulse 1s ease-in-out !important;
         }
         
         .animate-checkmate {
-            animation: checkmate-danger 1s ease-in-out;
+            animation: checkmate-danger 1s ease-in-out !important;
         }
 
         .floating-number {
