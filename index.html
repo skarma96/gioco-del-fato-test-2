@@ -1734,8 +1734,6 @@
   messagingSenderId: "358068623557",
   appId: "1:358068623557:web:dad9bbba9da419e186f8ac"
 };
-
-
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
@@ -2097,6 +2095,20 @@
                 if (data.gameEnded && data.winner) {
                     const isYou = data.winner === gameState.playerName;
                     showWinnerNotification(data.winner, isYou);
+                }
+                
+                // Close winner notification when new game starts
+                if (!data.gameEnded) {
+                    const notification = document.querySelector('.winner-notification');
+                    const overlay = document.querySelector('.hit-overlay');
+                    if (notification) {
+                        notification.classList.remove('show');
+                        setTimeout(() => notification.remove(), 300);
+                    }
+                    if (overlay) {
+                        overlay.classList.remove('show');
+                        setTimeout(() => overlay.remove(), 300);
+                    }
                 }
 
                 renderPlayers();
