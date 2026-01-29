@@ -132,6 +132,28 @@
             20%, 40%, 60%, 80% { transform: translateX(10px); }
         }
         
+        @keyframes slideDown {
+            0% {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-100%);
+            }
+            100% {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+        
+        @keyframes slideUp {
+            0% {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+            100% {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-100%);
+            }
+        }
+        
         body.shake {
             animation: shake 0.5s ease;
         }
@@ -1501,8 +1523,8 @@
                     <input type="number" id="num-players" min="2" max="18" value="4">
                 </div>
                 <div class="input-group">
-                    <label>HP iniziali</label>
-                    <input type="number" id="initial-hp" value="70">
+                    <label>HP iniziali <span id="hp-suggestion" style="color: #4ecca3; font-size: 0.85em;"></span></label>
+                    <input type="number" id="initial-hp" value="60">
                 </div>
                 <div id="player-names-container"></div>
                 <button id="create-game-btn">Crea Partita</button>
@@ -1755,6 +1777,70 @@
 
         let timerInterval = null;
 
+        // ==================== PERSISTENZA DATI ====================
+        
+        // Salva i dati essenziali in localStorage
+        function saveGameSession() {
+            try {
+                const sessionData = {
+                    gameCode: gameState.gameCode,
+                    isMaster: gameState.isMaster,
+                    playerName: gameState.playerName,
+                    timestamp: Date.now()
+                };
+                localStorage.setItem('giocoDelFatoSession', JSON.stringify(sessionData));
+            } catch (e) {
+                console.error('Errore nel salvare la sessione:', e);
+            }
+        }
+        
+        // Carica i dati dalla localStorage
+        function loadGameSession() {
+            try {
+                const saved = localStorage.getItem('giocoDelFatoSession');
+                if (!saved) return null;
+                
+                const sessionData = JSON.parse(saved);
+                
+                // Verifica che la sessione non sia troppo vecchia (es. 24 ore)
+                const maxAge = 24 * 60 * 60 * 1000; // 24 ore in millisecondi
+                if (Date.now() - sessionData.timestamp > maxAge) {
+                    localStorage.removeItem('giocoDelFatoSession');
+                    return null;
+                }
+                
+                return sessionData;
+            } catch (e) {
+                console.error('Errore nel caricare la sessione:', e);
+                return null;
+            }
+        }
+        
+        // Cancella la sessione salvata
+        function clearGameSession() {
+            try {
+                localStorage.removeItem('giocoDelFatoSession');
+            } catch (e) {
+                console.error('Errore nel cancellare la sessione:', e);
+            }
+        }
+        
+        // ==================== FINE PERSISTENZA ====================
+        
+        // Avviso prima di chiudere/ricaricare la pagina (solo se partita in corso)
+        window.addEventListener('beforeunload', (e) => {
+            // Mostra avviso solo se c'è una partita in corso
+            if (gameState.gameCode && gameState.playerName) {
+                // Salva sempre prima di uscire
+                saveGameSession();
+                
+                // Mostra avviso di conferma (alcuni browser lo supportano)
+                e.preventDefault();
+                e.returnValue = 'Sei sicuro di voler uscire? La partita continuerà e potrai rientrare ricaricando la pagina.';
+                return e.returnValue;
+            }
+        });
+
         // Setup Event Listeners
         document.getElementById('num-players').addEventListener('change', generatePlayerNameInputs);
 
@@ -1796,13 +1882,16 @@
             }
         });
 
-        // Auto-detect role from URL parameter
+        // Auto-detect role from URL parameter OR restore from localStorage
         const urlParams = new URLSearchParams(window.location.search);
         const gameCode = urlParams.get('game');
         const playerNameFromURL = urlParams.get('player');
         
+        // Prova a ripristinare la sessione salvata
+        const savedSession = loadGameSession();
+        
         if (gameCode) {
-            // Player joining via QR code
+            // Player joining via QR code (priorità massima)
             document.getElementById('player-join').classList.remove('hidden');
             document.getElementById('display-game-code').textContent = gameCode;
             loadAvailablePlayers(gameCode);
@@ -1813,8 +1902,57 @@
                     joinGame();
                 }, 500);
             }
+        } else if (savedSession && savedSession.gameCode) {
+            // Ripristina sessione salvata (master o giocatore che ha ricaricato)
+            console.log('Ripristino sessione salvata:', savedSession);
+            
+            gameState.gameCode = savedSession.gameCode;
+            gameState.isMaster = savedSession.isMaster;
+            gameState.playerName = savedSession.playerName;
+            
+            // Riconnetti alla partita
+            listenToGameChanges(savedSession.gameCode);
+            
+            // Mostra schermata di gioco
+            document.getElementById('setup-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'block';
+            
+            // Se è il master, mostra i controlli master
+            if (savedSession.isMaster) {
+                document.getElementById('master-controls').classList.remove('hidden');
+            }
+            
+            // Mostra notifica di ripristino
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: linear-gradient(135deg, #4ecca3 0%, #2d8a72 100%);
+                color: white;
+                padding: 15px 25px;
+                border-radius: 10px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+                z-index: 10000;
+                font-weight: bold;
+                animation: slideDown 0.5s ease;
+            `;
+            notification.innerHTML = `
+                ✅ Sessione ripristinata!<br>
+                <small style="font-weight: normal;">Partita: ${savedSession.gameCode} - ${savedSession.isMaster ? 'Master' : savedSession.playerName}</small>
+            `;
+            document.body.appendChild(notification);
+            
+            // Rimuovi notifica dopo 5 secondi
+            setTimeout(() => {
+                notification.style.animation = 'slideUp 0.5s ease';
+                setTimeout(() => notification.remove(), 500);
+            }, 5000);
+            
+            console.log('Sessione ripristinata con successo!');
         } else {
-            // Master creating new game
+            // Nessuna sessione salvata - Master creating new game
             document.getElementById('master-setup').classList.remove('hidden');
             generatePlayerNameInputs();
         }
@@ -1866,12 +2004,24 @@
                 container.appendChild(div);
             }
 
-            // Auto-suggest HP
+            // Auto-suggest HP based on number of players
             const hpInput = document.getElementById('initial-hp');
-            if (numPlayers >= 7) {
-                hpInput.value = 80;
+            const hpSuggestion = document.getElementById('hp-suggestion');
+            let suggestedHP;
+            
+            if (numPlayers <= 4) {
+                suggestedHP = 60;
+            } else if (numPlayers <= 6) {
+                suggestedHP = 70;
+            } else if (numPlayers <= 8) {
+                suggestedHP = 80;
             } else {
-                hpInput.value = 70;
+                suggestedHP = 85;
+            }
+            
+            hpInput.value = suggestedHP;
+            if (hpSuggestion) {
+                hpSuggestion.textContent = `(suggerito: ${suggestedHP})`;
             }
         }
 
@@ -1955,6 +2105,9 @@
             gameState.gameCode = code;
             gameState.isMaster = true;
             gameState.playerName = masterName;
+            
+            // Salva sessione in localStorage
+            saveGameSession();
 
             const gameData = {
                 players: players,
@@ -2035,6 +2188,9 @@
                 gameState.gameCode = code;
                 gameState.isMaster = false;
                 gameState.playerName = playerName;
+                
+                // Salva sessione in localStorage
+                saveGameSession();
 
                 listenToGameChanges(code);
                 
