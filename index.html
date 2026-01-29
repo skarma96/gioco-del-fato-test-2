@@ -705,31 +705,241 @@
         }
 
         @keyframes damage {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-10px); }
-            75% { transform: translateX(10px); }
+            0% { transform: translateX(0) rotate(0deg); background: rgba(255, 0, 0, 0); }
+            15% { transform: translateX(-15px) rotate(-5deg); background: rgba(255, 0, 0, 0.3); }
+            30% { transform: translateX(15px) rotate(5deg); background: rgba(255, 0, 0, 0.2); }
+            45% { transform: translateX(-10px) rotate(-3deg); background: rgba(255, 0, 0, 0.25); }
+            60% { transform: translateX(10px) rotate(3deg); background: rgba(255, 0, 0, 0.15); }
+            75% { transform: translateX(-5px) rotate(-1deg); background: rgba(255, 0, 0, 0.1); }
+            100% { transform: translateX(0) rotate(0deg); background: rgba(255, 0, 0, 0); }
         }
 
         @keyframes heal {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
+            0% { transform: scale(1); background: rgba(78, 204, 163, 0); }
+            25% { transform: scale(1.15) rotate(3deg); background: rgba(78, 204, 163, 0.35); }
+            50% { transform: scale(1.08) rotate(-3deg); background: rgba(78, 204, 163, 0.25); }
+            75% { transform: scale(1.12) rotate(2deg); background: rgba(78, 204, 163, 0.3); }
+            100% { transform: scale(1); background: rgba(78, 204, 163, 0); }
+        }
+
+        @keyframes immortal-pulse {
+            0% { 
+                transform: scale(1);
+                background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 237, 78, 0.1) 100%);
+                border: 3px solid rgba(255, 215, 0, 0.5);
+            }
+            25% { 
+                transform: scale(1.12);
+                background: linear-gradient(135deg, rgba(255, 215, 0, 0.4) 0%, rgba(255, 237, 78, 0.4) 100%);
+                border: 3px solid rgba(255, 215, 0, 1);
+            }
+            50% { 
+                transform: scale(1.08);
+                background: linear-gradient(135deg, rgba(255, 215, 0, 0.3) 0%, rgba(255, 237, 78, 0.3) 100%);
+                border: 3px solid rgba(255, 215, 0, 0.8);
+            }
+            75% { 
+                transform: scale(1.12);
+                background: linear-gradient(135deg, rgba(255, 215, 0, 0.4) 0%, rgba(255, 237, 78, 0.4) 100%);
+                border: 3px solid rgba(255, 215, 0, 1);
+            }
+            100% { 
+                transform: scale(1);
+                background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 237, 78, 0.1) 100%);
+                border: 3px solid rgba(255, 215, 0, 0.5);
+            }
+        }
+        
+        @keyframes multiplier-glow {
+            0% { 
+                transform: scale(1);
+                background: linear-gradient(135deg, rgba(255, 0, 255, 0.1) 0%, rgba(138, 43, 226, 0.1) 100%);
+                border: 3px solid rgba(255, 0, 255, 0.5);
+            }
+            33% { 
+                transform: scale(1.12) rotate(3deg);
+                background: linear-gradient(135deg, rgba(255, 0, 255, 0.35) 0%, rgba(138, 43, 226, 0.35) 100%);
+                border: 3px solid rgba(255, 0, 255, 1);
+            }
+            66% { 
+                transform: scale(1.08) rotate(-2deg);
+                background: linear-gradient(135deg, rgba(255, 0, 255, 0.25) 0%, rgba(138, 43, 226, 0.25) 100%);
+                border: 3px solid rgba(255, 0, 255, 0.8);
+            }
+            100% { 
+                transform: scale(1);
+                background: linear-gradient(135deg, rgba(255, 0, 255, 0.1) 0%, rgba(138, 43, 226, 0.1) 100%);
+                border: 3px solid rgba(255, 0, 255, 0.5);
+            }
+        }
+        
+        @keyframes conversion-sparkle {
+            0% { 
+                transform: scale(1) rotate(0deg);
+                background: linear-gradient(135deg, rgba(255, 105, 180, 0.1) 0%, rgba(255, 20, 147, 0.1) 100%);
+                border: 3px solid rgba(255, 105, 180, 0.5);
+            }
+            20% { 
+                transform: scale(1.18) rotate(8deg);
+                background: linear-gradient(135deg, rgba(255, 105, 180, 0.5) 0%, rgba(255, 20, 147, 0.5) 100%);
+                border: 3px solid rgba(255, 105, 180, 1);
+            }
+            40% { 
+                transform: scale(1.12) rotate(-6deg);
+                background: linear-gradient(135deg, rgba(255, 105, 180, 0.4) 0%, rgba(255, 20, 147, 0.4) 100%);
+                border: 3px solid rgba(255, 105, 180, 0.9);
+            }
+            60% { 
+                transform: scale(1.16) rotate(5deg);
+                background: linear-gradient(135deg, rgba(255, 105, 180, 0.45) 0%, rgba(255, 20, 147, 0.45) 100%);
+                border: 3px solid rgba(255, 105, 180, 1);
+            }
+            80% { 
+                transform: scale(1.08) rotate(-3deg);
+                background: linear-gradient(135deg, rgba(255, 105, 180, 0.3) 0%, rgba(255, 20, 147, 0.3) 100%);
+                border: 3px solid rgba(255, 105, 180, 0.7);
+            }
+            100% { 
+                transform: scale(1) rotate(0deg);
+                background: linear-gradient(135deg, rgba(255, 105, 180, 0.1) 0%, rgba(255, 20, 147, 0.1) 100%);
+                border: 3px solid rgba(255, 105, 180, 0.5);
+            }
+        }
+        
+        @keyframes armor-shine {
+            0% { 
+                transform: scale(1);
+                background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 140, 0, 0.1) 100%);
+                border: 3px solid rgba(255, 165, 0, 0.5);
+            }
+            25% { 
+                transform: scale(1.12);
+                background: linear-gradient(135deg, rgba(255, 215, 0, 0.4) 0%, rgba(255, 140, 0, 0.4) 100%);
+                border: 3px solid rgba(255, 165, 0, 1);
+            }
+            50% { 
+                transform: scale(1.08);
+                background: linear-gradient(135deg, rgba(255, 215, 0, 0.3) 0%, rgba(255, 140, 0, 0.3) 100%);
+                border: 3px solid rgba(255, 165, 0, 0.8);
+            }
+            75% { 
+                transform: scale(1.12);
+                background: linear-gradient(135deg, rgba(255, 215, 0, 0.4) 0%, rgba(255, 140, 0, 0.4) 100%);
+                border: 3px solid rgba(255, 165, 0, 1);
+            }
+            100% { 
+                transform: scale(1);
+                background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 140, 0, 0.1) 100%);
+                border: 3px solid rgba(255, 165, 0, 0.5);
+            }
+        }
+        
+        @keyframes kraken-pulse {
+            0% { 
+                transform: scale(1);
+                background: linear-gradient(135deg, rgba(153, 51, 255, 0.1) 0%, rgba(102, 0, 204, 0.1) 100%);
+                border: 3px solid rgba(153, 51, 255, 0.6);
+            }
+            15% { 
+                transform: scale(1.15);
+                background: linear-gradient(135deg, rgba(153, 51, 255, 0.4) 0%, rgba(102, 0, 204, 0.4) 100%);
+                border: 3px solid rgba(153, 51, 255, 1);
+            }
+            30% { 
+                transform: scale(1.1);
+                background: linear-gradient(135deg, rgba(153, 51, 255, 0.35) 0%, rgba(102, 0, 204, 0.35) 100%);
+                border: 3px solid rgba(153, 51, 255, 0.9);
+            }
+            45% { 
+                transform: scale(1.15);
+                background: linear-gradient(135deg, rgba(153, 51, 255, 0.4) 0%, rgba(102, 0, 204, 0.4) 100%);
+                border: 3px solid rgba(153, 51, 255, 1);
+            }
+            60% { 
+                transform: scale(1.08);
+                background: linear-gradient(135deg, rgba(153, 51, 255, 0.3) 0%, rgba(102, 0, 204, 0.3) 100%);
+                border: 3px solid rgba(153, 51, 255, 0.8);
+            }
+            100% { 
+                transform: scale(1);
+                background: linear-gradient(135deg, rgba(153, 51, 255, 0.1) 0%, rgba(102, 0, 204, 0.1) 100%);
+                border: 3px solid rgba(153, 51, 255, 0.6);
+            }
+        }
+        
+        @keyframes checkmate-danger {
+            0% { 
+                transform: scale(1);
+                background: linear-gradient(135deg, rgba(255, 0, 0, 0.1) 0%, rgba(139, 0, 0, 0.1) 100%);
+                border: 3px solid rgba(255, 0, 0, 0.6);
+            }
+            15% { 
+                transform: scale(1.2);
+                background: linear-gradient(135deg, rgba(255, 0, 0, 0.5) 0%, rgba(139, 0, 0, 0.5) 100%);
+                border: 3px solid rgba(255, 0, 0, 1);
+            }
+            30% { 
+                transform: scale(1.15);
+                background: linear-gradient(135deg, rgba(255, 0, 0, 0.4) 0%, rgba(139, 0, 0, 0.4) 100%);
+                border: 3px solid rgba(255, 0, 0, 0.9);
+            }
+            45% { 
+                transform: scale(1.2);
+                background: linear-gradient(135deg, rgba(255, 0, 0, 0.5) 0%, rgba(139, 0, 0, 0.5) 100%);
+                border: 3px solid rgba(255, 0, 0, 1);
+            }
+            60% { 
+                transform: scale(1.1);
+                background: linear-gradient(135deg, rgba(255, 0, 0, 0.35) 0%, rgba(139, 0, 0, 0.35) 100%);
+                border: 3px solid rgba(255, 0, 0, 0.8);
+            }
+            100% { 
+                transform: scale(1);
+                background: linear-gradient(135deg, rgba(255, 0, 0, 0.1) 0%, rgba(139, 0, 0, 0.1) 100%);
+                border: 3px solid rgba(255, 0, 0, 0.6);
+            }
         }
 
         .animate-damage {
-            animation: damage 0.5s ease;
+            animation: damage 0.6s ease !important;
         }
 
         .animate-heal {
-            animation: heal 0.5s ease;
+            animation: heal 0.8s ease !important;
+        }
+        
+        .animate-immortal {
+            animation: immortal-pulse 1.5s ease-in-out !important;
+        }
+        
+        .animate-multiplier {
+            animation: multiplier-glow 1.2s ease-in-out !important;
+        }
+        
+        .animate-conversion {
+            animation: conversion-sparkle 1s ease-in-out !important;
+        }
+        
+        .animate-armor {
+            animation: armor-shine 1.2s ease-in-out !important;
+        }
+        
+        .animate-kraken {
+            animation: kraken-pulse 1s ease-in-out !important;
+        }
+        
+        .animate-checkmate {
+            animation: checkmate-danger 1s ease-in-out !important;
         }
 
         .floating-number {
             position: fixed;
-            font-size: 2em;
-            font-weight: bold;
+            font-size: 3em;
+            font-weight: 900;
             pointer-events: none;
-            animation: float-up 1s ease-out forwards;
+            animation: float-up 1.2s ease-out forwards;
             z-index: 1000;
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.8), 0 0 20px currentColor;
         }
 
         .floating-number.damage {
@@ -739,11 +949,52 @@
         .floating-number.heal {
             color: #4ecca3;
         }
+        
+        .floating-number.immortal {
+            color: #ffd700;
+        }
+        
+        .floating-number.multiplier {
+            color: #ff00ff;
+        }
+        
+        .floating-number.conversion {
+            color: #ff69b4;
+        }
 
         @keyframes float-up {
-            0% { opacity: 1; transform: translateY(0); }
-            100% { opacity: 0; transform: translateY(-100px); }
+            0% { 
+                opacity: 1; 
+                transform: translateY(0) scale(1); 
+            }
+            20% {
+                transform: translateY(-30px) scale(1.2);
+            }
+            100% { 
+                opacity: 0; 
+                transform: translateY(-120px) scale(0.8); 
+            }
         }
+        
+        /* Effetto icona che appare */
+        @keyframes icon-appear {
+            0% {
+                opacity: 0;
+                transform: scale(0) rotate(-180deg);
+            }
+            60% {
+                transform: scale(1.3) rotate(10deg);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) rotate(0deg);
+            }
+        }
+        
+        .effect-icon-appear {
+            animation: icon-appear 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
 
         .direction-indicator {
             text-align: center;
@@ -1483,6 +1734,7 @@
   messagingSenderId: "358068623557",
   appId: "1:358068623557:web:dad9bbba9da419e186f8ac"
 };
+
 
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
@@ -2407,6 +2659,7 @@
                 if (target.isImmortal) {
                     // Immortal player takes no damage
                     gameState.history.push(`⭐ ${target.name} è immortale e non subisce danni!`);
+                    animateHP(result.targetIndex, 0, 'immortal'); // Animazione immortalità!
                     playSound('heal'); // Suono positivo per indicare l'immortalità
                     
                     // Visual effect for immortal player
@@ -2456,7 +2709,14 @@
                         // Converti danno in cura (NON aggiornare damageDealt/Taken!)
                         target.hp += actualDamage;
                         gameState.history.push(`${conversionReason}: ${target.name} si cura di ${actualDamage} HP invece di subirli!`);
-                        animateHP(result.targetIndex, actualDamage);
+                        
+                        // Animazione speciale per conversione/armatura
+                        if (conversionReason.includes('💫')) {
+                            animateHP(result.targetIndex, actualDamage, 'conversion');
+                        } else {
+                            animateHP(result.targetIndex, actualDamage, 'armor');
+                        }
+                        
                         playSound('heal');
                         
                         // Visual effects for heal
@@ -2477,6 +2737,8 @@
                             target.isEliminated = true;
                             gameState.history.push(`♟️ ${target.name} è stato eliminato dallo Scacco Matto! (${target.checkmateHP} HP)`);
                             
+                            animateHP(result.targetIndex, 0, 'checkmate'); // Animazione checkmate!
+                            
                             // Show elimination notification
                             if (target.name === gameState.playerName && !gameState.isMaster) {
                                 setTimeout(() => showEliminatedNotification(), 500);
@@ -2489,6 +2751,8 @@
                             target.hp = 0;
                             target.isEliminated = true;
                             gameState.history.push(`🐙 ${target.name} è stato eliminato dal Marchio del Kraken! (HP ≤ 10)`);
+                            
+                            animateHP(result.targetIndex, 0, 'kraken'); // Animazione kraken!
                             
                             // Show elimination notification
                             if (target.name === gameState.playerName && !gameState.isMaster) {
@@ -2793,31 +3057,84 @@
             return nextIndex;
         }
 
-        function animateHP(playerIndex, amount) {
+        function animateHP(playerIndex, amount, effectType = null) {
             const card = document.getElementById(`player-card-${playerIndex}`);
             if (!card) return;
 
-            if (amount < 0) {
+            // Remove any existing animation classes
+            card.classList.remove('animate-damage', 'animate-heal', 'animate-immortal', 
+                                 'animate-multiplier', 'animate-conversion', 'animate-armor',
+                                 'animate-kraken', 'animate-checkmate');
+
+            // Apply appropriate animation based on effect type or amount
+            if (effectType === 'immortal') {
+                card.classList.add('animate-immortal');
+                setTimeout(() => card.classList.remove('animate-immortal'), 1500);
+            } else if (effectType === 'multiplier') {
+                card.classList.add('animate-multiplier');
+                setTimeout(() => card.classList.remove('animate-multiplier'), 1200);
+            } else if (effectType === 'conversion') {
+                card.classList.add('animate-conversion');
+                setTimeout(() => card.classList.remove('animate-conversion'), 1000);
+            } else if (effectType === 'armor') {
+                card.classList.add('animate-armor');
+                setTimeout(() => card.classList.remove('animate-armor'), 1200);
+            } else if (effectType === 'kraken') {
+                card.classList.add('animate-kraken');
+                setTimeout(() => card.classList.remove('animate-kraken'), 1000);
+            } else if (effectType === 'checkmate') {
+                card.classList.add('animate-checkmate');
+                setTimeout(() => card.classList.remove('animate-checkmate'), 1000);
+            } else if (amount < 0) {
                 card.classList.add('animate-damage');
-                setTimeout(() => card.classList.remove('animate-damage'), 500);
-            } else {
+                setTimeout(() => card.classList.remove('animate-damage'), 600);
+            } else if (amount > 0) {
                 card.classList.add('animate-heal');
-                setTimeout(() => card.classList.remove('animate-heal'), 500);
+                setTimeout(() => card.classList.remove('animate-heal'), 800);
             }
 
-            showFloatingNumber(card, amount);
+            showFloatingNumber(card, amount, effectType);
         }
 
-        function showFloatingNumber(element, amount) {
+        function showFloatingNumber(element, amount, effectType = null) {
             const rect = element.getBoundingClientRect();
             const floater = document.createElement('div');
-            floater.className = `floating-number ${amount < 0 ? 'damage' : 'heal'}`;
-            floater.textContent = amount > 0 ? `+${amount}` : amount;
+            floater.className = 'floating-number';
+            
+            // Add effect-specific class
+            if (effectType === 'immortal') {
+                floater.classList.add('immortal');
+                floater.textContent = '⭐ IMMUNE';
+            } else if (effectType === 'multiplier') {
+                floater.classList.add('multiplier');
+                floater.textContent = '✨';
+            } else if (effectType === 'conversion') {
+                floater.classList.add('conversion');
+                floater.textContent = amount > 0 ? `💫 +${amount}` : `💫 ${amount}`;
+            } else if (effectType === 'armor') {
+                floater.classList.add('conversion');
+                floater.textContent = amount > 0 ? `🛡️ +${amount}` : `🛡️ ${amount}`;
+            } else if (effectType === 'kraken') {
+                floater.classList.add('damage');
+                floater.textContent = '🐙 KRAKEN!';
+            } else if (effectType === 'checkmate') {
+                floater.classList.add('damage');
+                floater.textContent = '♟️ CHECKMATE!';
+            } else if (amount < 0) {
+                floater.classList.add('damage');
+                floater.textContent = amount;
+            } else if (amount > 0) {
+                floater.classList.add('heal');
+                floater.textContent = `+${amount}`;
+            } else {
+                return; // No animation for 0
+            }
+            
             floater.style.left = rect.left + rect.width / 2 + 'px';
             floater.style.top = rect.top + 'px';
             
             document.body.appendChild(floater);
-            setTimeout(() => floater.remove(), 1000);
+            setTimeout(() => floater.remove(), 1200);
         }
 
         function playSound(type) {
@@ -3260,38 +3577,59 @@
         function newGame() {
             if (!gameState.isMaster) return;
             
-            if (!confirm('Vuoi iniziare una nuova partita? Gli HP saranno resettati.')) return;
+            if (!confirm('Vuoi iniziare una nuova partita? Gli HP e tutti gli effetti saranno resettati.')) return;
             
             // Use the initial HP that was set when the game was created
             const resetHP = gameState.initialHP || 70;
             
-            // Reset all players
+            // Reset all players completely
             gameState.players.forEach(player => {
-                player.hp = resetHP;
-                player.isEliminated = false;
+                player.hp = player.initialHP || resetHP;
+                player.eliminated = false;
+                player.immortal = false;
+                player.multiplier = null;
+                player.skipTurn = false;
+                player.customDice = null;
+                player.customDiceCount = null;
+                player.krakenMark = false;
+                player.checkmateHP = null;
+                player.damageToHeal = false;
+                player.sunArmor = false;
+                player.moonArmor = false;
+                player.temporaryEffects = {
+                    immortal: false,
+                    multiplier: false,
+                    skipTurn: false,
+                    customDice: false,
+                    damageToHeal: false,
+                    sunArmor: false,
+                    moonArmor: false
+                };
             });
             
             // Reset game state
             gameState.currentTurn = 0;
-            gameState.direction = 'clockwise';
+            gameState.turnDirection = 1;
             gameState.history = ['🎮 Nuova partita iniziata!'];
             gameState.startTime = Date.now();
             
             database.ref('games/' + gameState.gameCode).update({
                 players: gameState.players,
                 currentTurn: 0,
-                direction: 'clockwise',
+                turnDirection: 1,
                 history: gameState.history,
                 startTime: gameState.startTime,
                 gameEnded: false,
                 winner: null
             });
             
-            // Restart timer
+            // Restart timer if exists
             if (timerInterval) {
                 clearInterval(timerInterval);
             }
-            startTimer();
+            if (gameState.startTime) {
+                startTimer();
+            }
         }
         
         function showQRModal() {
@@ -3351,6 +3689,11 @@
                 const player = gameState.players[index];
                 player.isImmortal = !player.isImmortal;
                 
+                // Animazione quando viene attivata
+                if (player.isImmortal) {
+                    animateHP(index, 0, 'immortal');
+                }
+                
                 // Mark as temporary effect
                 if (!player.temporaryEffects) {
                     player.temporaryEffects = {};
@@ -3386,6 +3729,9 @@
                 const player = gameState.players[index];
                 player.multiplier = multiplierValue;
                 player.multiplierAppliedBy = currentPlayerIndex; // Salva chi ha applicato il moltiplicatore
+                
+                // Animazione moltiplicatore
+                animateHP(index, 0, 'multiplier');
                 
                 // Mark as temporary effect
                 if (!player.temporaryEffects) {
@@ -3624,6 +3970,9 @@
             selectedIndices.forEach(index => {
                 const player = gameState.players[index];
                 player.krakenMark = !player.krakenMark;
+                if (player.krakenMark) {
+                    animateHP(index, 0, 'kraken'); // Animazione Kraken!
+                }
             });
             
             // Update Firebase
@@ -3657,6 +4006,7 @@
             selectedIndices.forEach(index => {
                 const player = gameState.players[index];
                 player.checkmateHP = checkmateValue;
+                animateHP(index, 0, 'checkmate'); // Animazione Checkmate!
             });
             
             // Update Firebase
@@ -3702,6 +4052,9 @@
             selectedIndices.forEach(index => {
                 const player = gameState.players[index];
                 player.damageToHeal = !player.damageToHeal;
+                if (player.damageToHeal) {
+                    animateHP(index, 0, 'conversion'); // Animazione conversione!
+                }
                 if (!player.temporaryEffects) player.temporaryEffects = {};
                 player.temporaryEffects.damageToHeal = player.damageToHeal;
             });
@@ -3720,6 +4073,9 @@
             selectedIndices.forEach(index => {
                 const player = gameState.players[index];
                 player.sunArmor = !player.sunArmor;
+                if (player.sunArmor) {
+                    animateHP(index, 0, 'armor'); // Animazione armatura!
+                }
                 if (!player.temporaryEffects) player.temporaryEffects = {};
                 player.temporaryEffects.sunArmor = player.sunArmor;
             });
@@ -3738,6 +4094,9 @@
             selectedIndices.forEach(index => {
                 const player = gameState.players[index];
                 player.moonArmor = !player.moonArmor;
+                if (player.moonArmor) {
+                    animateHP(index, 0, 'armor'); // Animazione armatura!
+                }
                 if (!player.temporaryEffects) player.temporaryEffects = {};
                 player.temporaryEffects.moonArmor = player.moonArmor;
             });
