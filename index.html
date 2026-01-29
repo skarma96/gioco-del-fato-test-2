@@ -1734,6 +1734,7 @@
   messagingSenderId: "358068623557",
   appId: "1:358068623557:web:dad9bbba9da419e186f8ac"
 };
+
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
@@ -1886,12 +1887,13 @@
 
             const players = [{ 
                 name: masterName, 
-                hp: initialHP, 
+                hp: initialHP,
+                initialHP: initialHP,
                 isEliminated: false, 
                 isMaster: true, 
                 connected: true, 
                 isImmortal: false, 
-                multiplier: 1,
+                multiplier: null,
                 multiplierAppliedBy: null,
                 skipTurn: false,
                 customDiceCount: null,
@@ -1916,12 +1918,13 @@
                 if (playerName) {
                     players.push({ 
                         name: playerName, 
-                        hp: initialHP, 
+                        hp: initialHP,
+                        initialHP: initialHP,
                         isEliminated: false, 
                         isMaster: false, 
                         connected: false, 
                         isImmortal: false, 
-                        multiplier: 1,
+                        multiplier: null,
                         multiplierAppliedBy: null,
                         skipTurn: false,
                         customDiceCount: null,
@@ -1956,7 +1959,7 @@
             const gameData = {
                 players: players,
                 currentTurn: 0,
-                direction: 'clockwise',
+                turnDirection: 1,
                 diceCount: 3,
                 history: [],
                 startTime: null,
@@ -2080,7 +2083,7 @@
                 const data = snapshot.val();
                 gameState.players = data.players || [];
                 gameState.currentTurn = data.currentTurn || 0;
-                gameState.direction = data.direction || 'clockwise';
+                gameState.turnDirection = data.turnDirection || 1;
                 gameState.diceCount = data.diceCount || 3;
                 gameState.history = data.history || [];
                 gameState.startTime = data.startTime;
@@ -2240,8 +2243,8 @@
         }
 
         function updateDirectionDisplay() {
-            const arrow = gameState.direction === 'clockwise' ? '⭮' : '⭯';
-            const text = gameState.direction === 'clockwise' ? 'Oraria' : 'Antioraria';
+            const arrow = gameState.turnDirection === 1 ? '⭮' : '⭯';
+            const text = gameState.turnDirection === 1 ? 'Oraria' : 'Antioraria';
             document.getElementById('direction').innerHTML = `Direzione: ${arrow} ${text}`;
         }
 
@@ -2552,8 +2555,8 @@
             let count = sum % activePlayers.length;
             if (count === 0) count = activePlayers.length;
 
-            if (gameState.direction === 'clockwise') {
-                // Senso orario: ordina per index crescente, partendo da dopo lo shooter
+            if (gameState.turnDirection === 1) {
+                // Senso orario (turnDirection = 1): ordina per index crescente, partendo da dopo lo shooter
                 const sorted = [...activePlayers].sort((a, b) => {
                     // Metti prima quelli dopo lo shooter, poi quelli prima
                     const aAfter = a.index > shooterIndex ? a.index : a.index + 1000;
@@ -2564,7 +2567,7 @@
                 const targetPos = (count - 1) % sorted.length;
                 return sorted[targetPos].index;
             } else {
-                // Senso antiorario: ordina per index decrescente, partendo da prima dello shooter
+                // Senso antiorario (turnDirection = -1): ordina per index decrescente, partendo da prima dello shooter
                 const sorted = [...activePlayers].sort((a, b) => {
                     // Metti prima quelli prima dello shooter, poi quelli dopo (ma in ordine inverso)
                     const aValue = a.index < shooterIndex ? (shooterIndex - a.index) : (shooterIndex + gameState.players.length - a.index);
@@ -2665,6 +2668,9 @@
             
             const target = result.targetIndex >= 0 ? gameState.players[result.targetIndex] : null;
 
+            // Track actual damage dealt (for selfHeal calculation)
+            let actualDamageDealt = 0;
+
             // Apply damage
             if (target) {
                 // Check if target is immortal
@@ -2679,6 +2685,9 @@
                         screenFlash('heal');
                         createParticles(window.innerWidth / 2, window.innerHeight / 2, 'heal');
                     }
+                    
+                    // NO DAMAGE DEALT = NO SELF HEAL for Tris
+                    actualDamageDealt = 0;
                 } else {
                     // Initialize stats for target if not exists
                     if (!gameState.stats[target.name]) {
@@ -2736,10 +2745,16 @@
                             screenFlash('heal');
                             createParticles(window.innerWidth / 2, window.innerHeight / 2, 'heal');
                         }
+                        
+                        // Conversion = damage dealt for Tris self-heal calculation
+                        actualDamageDealt = actualDamage;
                     } else {
                         // Applica danno normalmente - SOLO QUI aggiorniamo le stats
                         gameState.stats[shooter.name].damageDealt += actualDamage;
                         gameState.stats[target.name].damageTaken += actualDamage;
+                        
+                        // Track actual damage for Tris self-heal
+                        actualDamageDealt = actualDamage;
                         
                         target.hp = Math.max(0, target.hp - actualDamage);
                         
@@ -2794,18 +2809,17 @@
                         animateHP(result.targetIndex, -actualDamage);
                         
                         // Add multiplier info to history
-                        if (multiplier !== 1) {
+                        if (multiplier !== 1 && target.multiplier !== null) {
                             gameState.history.push(`✨ ${target.name} ha un moltiplicatore x${multiplier}! Danno effettivo: ${actualDamage}`);
                         }
                     }
                 }
             }
 
-            // Apply heal
-            if (result.selfHeal > 0) {
-                // Apply multiplier to heal
-                const multiplier = shooter.multiplier || 1;
-                const actualHeal = Math.ceil(result.selfHeal * multiplier); // Arrotonda per eccesso
+            // Apply heal (for Tris)
+            if (result.selfHeal > 0 && actualDamageDealt > 0) {
+                // Heal is equal to the ACTUAL damage dealt (after multipliers and conversions)
+                const actualHeal = actualDamageDealt;
                 
                 shooter.hp += actualHeal;
                 gameState.stats[shooter.name].healingDone += actualHeal;
@@ -2818,10 +2832,7 @@
                     createParticles(window.innerWidth / 2, window.innerHeight / 2, 'heal');
                 }
                 
-                // Add multiplier info to history
-                if (multiplier !== 1) {
-                    gameState.history.push(`✨ ${shooter.name} ha un moltiplicatore x${multiplier}! Cura effettiva: ${actualHeal}`);
-                }
+                gameState.history.push(`💚 ${shooter.name} si cura di ${actualHeal} HP (Tris)`);
             }
             
             // Track special moves
@@ -2996,8 +3007,8 @@
             const resetPlayers = gameState.players.map(player => ({
                 ...player,
                 hp: player.initialHP || gameState.initialHP || 70,
-                eliminated: false,
-                immortal: false,
+                isEliminated: false,
+                isImmortal: false,
                 multiplier: null,
                 skipTurn: false,
                 customDice: null,
@@ -3067,16 +3078,18 @@
             let attempts = 0;
             
             do {
-                if (gameState.direction === 'clockwise') {
-                    nextIndex = (nextIndex + 1) % gameState.players.length;
-                } else {
-                    nextIndex = (nextIndex - 1 + gameState.players.length) % gameState.players.length;
-                }
+                nextIndex = (nextIndex + gameState.turnDirection + gameState.players.length) % gameState.players.length;
                 attempts++;
                 
                 // Se il giocatore ha skipTurn attivo, aggiungilo alla history e continua
                 if (gameState.players[nextIndex].skipTurn && !gameState.players[nextIndex].isEliminated) {
                     gameState.history.push(`⏭️ ${gameState.players[nextIndex].name} salta il turno`);
+                    
+                    // Reset skipTurn if it's temporary (after being skipped once)
+                    if (gameState.players[nextIndex].temporaryEffects && gameState.players[nextIndex].temporaryEffects.skipTurn) {
+                        gameState.players[nextIndex].skipTurn = false;
+                        gameState.players[nextIndex].temporaryEffects.skipTurn = false;
+                    }
                 }
                 
             } while ((gameState.players[nextIndex].isEliminated || gameState.players[nextIndex].skipTurn) && attempts < gameState.players.length);
@@ -3361,8 +3374,8 @@
         function reverseDirection() {
             if (!gameState.isMaster) return;
             
-            const newDirection = gameState.direction === 'clockwise' ? 'counterclockwise' : 'clockwise';
-            database.ref('games/' + gameState.gameCode).update({ direction: newDirection });
+            const newDirection = gameState.turnDirection * -1;
+            database.ref('games/' + gameState.gameCode).update({ turnDirection: newDirection });
             
             gameState.history.push('⭮ Direzione invertita');
             database.ref('games/' + gameState.gameCode + '/history').set(gameState.history);
@@ -3484,7 +3497,7 @@
                             }
                             
                             animateHP(playerIndex, -actualAmount);
-                            if (multiplier !== 1) {
+                            if (multiplier !== 1 && player.multiplier !== null) {
                                 gameState.history.push(`💥 ${player.name} riceve ${actualAmount} danni (x${multiplier}) (Master)`);
                             } else {
                                 gameState.history.push(`💥 ${player.name} riceve ${actualAmount} danni (Master)`);
@@ -3495,7 +3508,7 @@
                     player.hp += actualAmount;
                     if (player.isEliminated) player.isEliminated = false;
                     animateHP(playerIndex, actualAmount);
-                    if (multiplier !== 1) {
+                    if (multiplier !== 1 && player.multiplier !== null) {
                         gameState.history.push(`💚 ${player.name} recupera ${actualAmount} HP (x${multiplier}) (Master)`);
                     } else {
                         gameState.history.push(`💚 ${player.name} recupera ${actualAmount} HP (Master)`);
@@ -3612,8 +3625,8 @@
             // Reset all players completely
             gameState.players.forEach(player => {
                 player.hp = player.initialHP || resetHP;
-                player.eliminated = false;
-                player.immortal = false;
+                player.isEliminated = false;
+                player.isImmortal = false;
                 player.multiplier = null;
                 player.skipTurn = false;
                 player.customDice = null;
@@ -3789,10 +3802,10 @@
                 return;
             }
             
-            // Remove multiplier (set to 1) for selected players
+            // Remove multiplier (set to null) for selected players
             selectedIndices.forEach(index => {
                 const player = gameState.players[index];
-                player.multiplier = 1;
+                player.multiplier = null;
                 player.multiplierAppliedBy = null;
                 if (player.temporaryEffects) {
                     player.temporaryEffects.multiplier = false;
@@ -3924,9 +3937,9 @@
             // (moltiplicatori durano fino al turno del giocatore che li ha applicati)
             let multiplierResetPlayers = [];
             gameState.players.forEach((p, index) => {
-                if (p.multiplierAppliedBy === playerIndex && p.multiplier !== 1) {
+                if (p.multiplierAppliedBy === playerIndex && p.multiplier !== null) {
                     multiplierResetPlayers.push(p.name);
-                    p.multiplier = 1;
+                    p.multiplier = null;
                     p.multiplierAppliedBy = null;
                     if (p.temporaryEffects) {
                         p.temporaryEffects.multiplier = false;
