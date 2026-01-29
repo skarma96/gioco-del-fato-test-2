@@ -2983,12 +2983,12 @@
             // Reset game state keeping players connected
             const resetPlayers = gameState.players.map(player => ({
                 ...player,
-                hp: gameState.initialHP || 70,
-                isEliminated: false,
-                isImmortal: false,
-                multiplier: 1,
-                multiplierAppliedBy: null,
+                hp: player.initialHP || gameState.initialHP || 70,
+                eliminated: false,
+                immortal: false,
+                multiplier: null,
                 skipTurn: false,
+                customDice: null,
                 customDiceCount: null,
                 krakenMark: false,
                 checkmateHP: null,
@@ -3011,16 +3011,31 @@
             database.ref('games/' + gameState.gameCode).update({
                 players: resetPlayers,
                 currentTurn: 0,
+                turnDirection: 1,
                 history: ['🎮 Nuova partita iniziata!'],
                 stats: {},
                 gameEnded: false,
                 winner: null,
-                startTime: Date.now(),
-                direction: 'clockwise'
+                startTime: Date.now()
             });
             
-            // Reload page to reset UI
-            location.reload();
+            // Close winner notification and overlay
+            const notification = document.querySelector('.winner-notification');
+            const overlay = document.querySelector('.hit-overlay');
+            if (notification) {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 300);
+            }
+            if (overlay) {
+                overlay.classList.remove('show');
+                setTimeout(() => overlay.remove(), 300);
+            }
+            
+            // Restart timer
+            if (timerInterval) {
+                clearInterval(timerInterval);
+            }
+            startTimer();
         }
         
         function getGameDuration() {
