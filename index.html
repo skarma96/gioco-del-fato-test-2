@@ -1574,6 +1574,11 @@
             <div id="current-turn" style="text-align: center; font-size: 1.2em; color: #ffd700; margin: 15px 0;">
                 Turno di: <strong id="turn-player"></strong>
             </div>
+            
+            <div id="high-tide-indicator" class="hidden" style="text-align: center; background: linear-gradient(135deg, #006994 0%, #00b4d8 100%); color: white; padding: 12px; border-radius: 10px; margin: 10px 0; font-weight: bold; box-shadow: 0 4px 15px rgba(0,180,216,0.4);">
+                🌊 ALTA MAREA ATTIVA 🌊<br>
+                <span style="font-size: 0.9em;">Soglia: <span id="high-tide-threshold-display"></span> HP | Finisce al prossimo turno</span>
+            </div>
 
             <!-- Dice Calculator -->
             <div class="dice-calculator" id="dice-calculator">
@@ -1684,6 +1689,32 @@
                     <button id="toggle-moon-armor-btn" style="background: linear-gradient(135deg, #191970 0%, #4169e1 100%);">🌙 Attiva/Disattiva Armatura Luna</button>
                     <div style="font-size: 0.85em; color: #87ceeb; margin-top: 8px; padding: 8px; background: rgba(25,25,112,0.2); border-radius: 8px;">
                         💡 Dura 1 turno - Danni pari diventano cure
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label>🌊 Alta Marea (effetto globale per 1 turno)</label>
+                    <div class="hp-modifier">
+                        <input type="number" id="high-tide-threshold" placeholder="Soglia HP" min="1" value="50">
+                        <button id="activate-high-tide-btn" style="background: linear-gradient(135deg, #006994 0%, #00b4d8 100%);">🌊 Attiva Alta Marea</button>
+                    </div>
+                    <div style="font-size: 0.85em; color: #00b4d8; margin-top: 8px; padding: 8px; background: rgba(0,180,216,0.15); border-radius: 8px;">
+                        💡 Dura 1 turno - HP > soglia: danni ×2 | HP ≤ soglia: danni ×0.5
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label>🛡️ Rifletti Danni (seleziona uno o più giocatori)</label>
+                    <select id="reflect-damage-players" multiple size="5"></select>
+                    <div style="margin: 8px 0;">
+                        <label style="display: inline-flex; align-items: center; cursor: pointer; color: #ff6b6b;">
+                            <input type="checkbox" id="reflect-damage-temporary" style="margin-right: 8px;">
+                            <span>Temporaneo (1 turno)</span>
+                        </label>
+                    </div>
+                    <button id="toggle-reflect-damage-btn" style="background: linear-gradient(135deg, #8b0000 0%, #dc143c 100%);">🛡️ Attiva/Disattiva Rifletti Danni</button>
+                    <div style="font-size: 0.85em; color: #ff6b6b; margin-top: 8px; padding: 8px; background: rgba(220,20,60,0.15); border-radius: 8px;">
+                        💡 Chi attacca subisce gli stessi danni
                     </div>
                 </div>
                 
@@ -1874,6 +1905,8 @@
         document.getElementById('toggle-damage-to-heal-btn')?.addEventListener('click', toggleDamageToHeal);
         document.getElementById('toggle-sun-armor-btn')?.addEventListener('click', toggleSunArmor);
         document.getElementById('toggle-moon-armor-btn')?.addEventListener('click', toggleMoonArmor);
+        document.getElementById('activate-high-tide-btn')?.addEventListener('click', activateHighTide);
+        document.getElementById('toggle-reflect-damage-btn')?.addEventListener('click', toggleReflectDamage);
         
         // Close modal clicking outside
         document.getElementById('qr-modal')?.addEventListener('click', function(e) {
@@ -2052,6 +2085,7 @@
                 damageToHeal: false,
                 sunArmor: false,
                 moonArmor: false,
+                reflectDamage: false,
                 temporaryEffects: {
                     immortal: false,
                     multiplier: false,
@@ -2059,7 +2093,8 @@
                     customDice: false,
                     damageToHeal: false,
                     sunArmor: false,
-                    moonArmor: false
+                    moonArmor: false,
+                    reflectDamage: false
                 }
             }];
             
@@ -2083,6 +2118,7 @@
                         damageToHeal: false,
                         sunArmor: false,
                         moonArmor: false,
+                        reflectDamage: false,
                         temporaryEffects: {
                             immortal: false,
                             multiplier: false,
@@ -2090,7 +2126,8 @@
                             customDice: false,
                             damageToHeal: false,
                             sunArmor: false,
-                            moonArmor: false
+                            moonArmor: false,
+                            reflectDamage: false
                         }
                     });
                 }
@@ -2117,7 +2154,10 @@
                 history: [],
                 startTime: null,
                 started: false,
-                initialHP: initialHP
+                initialHP: initialHP,
+                highTideActive: false,
+                highTideThreshold: null,
+                highTideTurnEnd: null
             };
 
             database.ref('games/' + code).set(gameData).then(() => {
@@ -2245,6 +2285,19 @@
                 gameState.startTime = data.startTime;
                 gameState.initialHP = data.initialHP || 70;
                 gameState.stats = data.stats || {};
+                gameState.highTideActive = data.highTideActive || false;
+                gameState.highTideThreshold = data.highTideThreshold || null;
+                gameState.highTideTurnEnd = data.highTideTurnEnd || null;
+                
+                // Update High Tide indicator
+                const highTideIndicator = document.getElementById('high-tide-indicator');
+                const highTideDisplay = document.getElementById('high-tide-threshold-display');
+                if (gameState.highTideActive && gameState.highTideThreshold) {
+                    if (highTideIndicator) highTideIndicator.classList.remove('hidden');
+                    if (highTideDisplay) highTideDisplay.textContent = gameState.highTideThreshold;
+                } else {
+                    if (highTideIndicator) highTideIndicator.classList.add('hidden');
+                }
 
                 if (data.started && document.getElementById('setup-screen').classList.contains('hidden') === false) {
                     showGameScreen();
@@ -2305,7 +2358,7 @@
                 
                 card.innerHTML = `
                     <div class="player-info">
-                        <div class="player-name">${player.name}${player.isMaster ? ' 👑' : ''}${player.isImmortal ? ' ⭐' : ''}${(player.multiplier > 1 || player.multiplier < 1) ? ' ✨x' + player.multiplier : ''}${player.skipTurn ? ' ⏭️' : ''}${player.customDiceCount ? ' 🎲×' + player.customDiceCount : ''}${player.krakenMark ? ' 🐙' : ''}${player.checkmateHP ? ' ♟️' : ''}${player.damageToHeal ? ' 💫' : ''}${player.sunArmor ? ' ☀️' : ''}${player.moonArmor ? ' 🌙' : ''}</div>
+                        <div class="player-name">${player.name}${player.isMaster ? ' 👑' : ''}${player.isImmortal ? ' ⭐' : ''}${(player.multiplier > 1 || player.multiplier < 1) ? ' ✨x' + player.multiplier : ''}${player.skipTurn ? ' ⏭️' : ''}${player.customDiceCount ? ' 🎲×' + player.customDiceCount : ''}${player.krakenMark ? ' 🐙' : ''}${player.checkmateHP ? ' ♟️' : ''}${player.damageToHeal ? ' 💫' : ''}${player.sunArmor ? ' ☀️' : ''}${player.moonArmor ? ' 🌙' : ''}${player.reflectDamage ? ' 🛡️' : ''}</div>
                         <div class="player-hp ${hpClass}">${player.hp} HP</div>
                     </div>
                     ${player.isEliminated ? '<div style="color: #dc3545; margin-top: 5px;">☠️ Eliminato</div>' : ''}
@@ -2318,6 +2371,7 @@
                     ${player.damageToHeal ? '<div style="color: #ff69b4; margin-top: 5px;">💫 Conversione Danni→Cure (temp)</div>' : ''}
                     ${player.sunArmor ? '<div style="color: #ffa500; margin-top: 5px;">☀️ Armatura del Sole (temp)</div>' : ''}
                     ${player.moonArmor ? '<div style="color: #87ceeb; margin-top: 5px;">🌙 Armatura della Luna (temp)</div>' : ''}
+                    ${player.reflectDamage ? '<div style="color: #ff6b6b; margin-top: 5px; font-weight: bold;">🛡️ Rifletti Danni' + (player.temporaryEffects?.reflectDamage ? ' (temp)' : '') + '</div>' : ''}
                 `;
                 
                 container.appendChild(card);
@@ -2614,6 +2668,19 @@
                     moonArmorSelect.appendChild(option);
                 });
             }
+            
+            // Update reflect damage select
+            const reflectDamageSelect = document.getElementById('reflect-damage-players');
+            if (reflectDamageSelect) {
+                reflectDamageSelect.innerHTML = '';
+                gameState.players.forEach((player, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = player.name + (player.reflectDamage ? ' 🛡️' : '');
+                    if (player.reflectDamage) option.selected = true;
+                    reflectDamageSelect.appendChild(option);
+                });
+            }
         }
 
         function calculateDice() {
@@ -2857,7 +2924,21 @@
                     }
                     
                     // Apply multiplier to damage
-                    const multiplier = target.multiplier || 1;
+                    let multiplier = target.multiplier || 1;
+                    
+                    // Apply High Tide effect if active
+                    if (gameState.highTideActive && gameState.highTideThreshold) {
+                        if (target.hp > gameState.highTideThreshold) {
+                            // Above threshold: double damage
+                            multiplier *= 2;
+                            gameState.history.push(`🌊 Alta Marea: ${target.name} (${target.hp} HP > ${gameState.highTideThreshold}) subisce danni ×2`);
+                        } else {
+                            // Below or equal threshold: half damage
+                            multiplier *= 0.5;
+                            gameState.history.push(`🌊 Alta Marea: ${target.name} (${target.hp} HP ≤ ${gameState.highTideThreshold}) subisce danni ×0.5`);
+                        }
+                    }
+                    
                     const actualDamage = Math.ceil(result.damage * multiplier); // Arrotonda per eccesso
                     
                     const wasAlive = !target.isEliminated;
@@ -2968,6 +3049,38 @@
                         if (multiplier !== 1 && target.multiplier !== null) {
                             gameState.history.push(`✨ ${target.name} ha un moltiplicatore x${multiplier}! Danno effettivo: ${actualDamage}`);
                         }
+                        
+                        // Reflect Damage: if target has reflectDamage, shooter takes same damage
+                        if (target.reflectDamage && !target.isEliminated) {
+                            // Check if shooter is immortal
+                            if (shooter.isImmortal) {
+                                gameState.history.push(`🛡️ ${target.name} riflette i danni, ma ${shooter.name} è immortale!`);
+                            } else {
+                                const reflectedDamage = actualDamage;
+                                shooter.hp = Math.max(0, shooter.hp - reflectedDamage);
+                                
+                                gameState.history.push(`🛡️ ${target.name} riflette ${reflectedDamage} danni a ${shooter.name}!`);
+                                animateHP(result.shooterIndex, -reflectedDamage);
+                                
+                                // Check if shooter gets eliminated by reflected damage
+                                if (shooter.hp === 0 && !shooter.isEliminated) {
+                                    shooter.isEliminated = true;
+                                    gameState.history.push(`☠️ ${shooter.name} è stato eliminato dai danni riflessi!`);
+                                    
+                                    if (shooter.name === gameState.playerName && !gameState.isMaster) {
+                                        setTimeout(() => showEliminatedNotification(), 500);
+                                    }
+                                    
+                                    playSound('elimination');
+                                }
+                                
+                                // Visual effects for reflected damage
+                                if (shooter.name === gameState.playerName) {
+                                    screenFlash('damage');
+                                    createParticles(window.innerWidth / 2, window.innerHeight / 2, 'damage');
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -3009,14 +3122,25 @@
 
             // Next turn
             const nextTurn = getNextActiveTurn();
-
-            // Update Firebase
-            database.ref('games/' + gameState.gameCode).update({
+            
+            // Check if High Tide should end (after 1 turn)
+            let updateData = {
                 players: gameState.players,
                 currentTurn: nextTurn,
                 history: gameState.history,
                 stats: gameState.stats
-            });
+            };
+            
+            if (gameState.highTideActive && gameState.highTideTurnEnd === gameState.currentTurn) {
+                // High Tide ends after this turn
+                updateData.highTideActive = false;
+                updateData.highTideThreshold = null;
+                updateData.highTideTurnEnd = null;
+                gameState.history.push('🌊 L\'Alta Marea si è ritirata');
+            }
+
+            // Update Firebase
+            database.ref('games/' + gameState.gameCode).update(updateData);
         }
 
         function showEliminatedNotification() {
@@ -3174,6 +3298,7 @@
                 damageToHeal: false,
                 sunArmor: false,
                 moonArmor: false,
+                reflectDamage: false,
                 temporaryEffects: {
                     immortal: false,
                     multiplier: false,
@@ -3181,7 +3306,8 @@
                     customDice: false,
                     damageToHeal: false,
                     sunArmor: false,
-                    moonArmor: false
+                    moonArmor: false,
+                    reflectDamage: false
                 }
                 // Mantiene: name, isMaster, connected
             }));
@@ -3195,7 +3321,10 @@
                 stats: {},
                 gameEnded: false,
                 winner: null,
-                startTime: Date.now()
+                startTime: Date.now(),
+                highTideActive: false,
+                highTideThreshold: null,
+                highTideTurnEnd: null
             });
             
             // Close winner notification and overlay
@@ -3792,6 +3921,7 @@
                 player.damageToHeal = false;
                 player.sunArmor = false;
                 player.moonArmor = false;
+                player.reflectDamage = false;
                 player.temporaryEffects = {
                     immortal: false,
                     multiplier: false,
@@ -3799,7 +3929,8 @@
                     customDice: false,
                     damageToHeal: false,
                     sunArmor: false,
-                    moonArmor: false
+                    moonArmor: false,
+                    reflectDamage: false
                 };
             });
             
@@ -3816,7 +3947,10 @@
                 history: gameState.history,
                 startTime: gameState.startTime,
                 gameEnded: false,
-                winner: null
+                winner: null,
+                highTideActive: false,
+                highTideThreshold: null,
+                highTideTurnEnd: null
             });
             
             // Restart timer if exists
@@ -4081,73 +4215,86 @@
             const player = gameState.players[playerIndex];
             if (!player || !player.temporaryEffects) return;
             
-            let resetMessage = [];
-            
-            // Reset immortality if temporary (only for the player who just played)
-            if (player.temporaryEffects.immortal && player.isImmortal) {
-                player.isImmortal = false;
-                resetMessage.push('immortalità');
+            // NUOVA LOGICA: Gli effetti temporanei durano fino al prossimo turno del MASTER
+            // Reset solo se il giocatore che ha appena giocato è il master
+            if (!player.isMaster) {
+                // Non è il master, non resettiamo niente
+                return;
             }
             
-            // Reset multipliers for ALL players if this player applied them
-            // (moltiplicatori durano fino al turno del giocatore che li ha applicati)
-            let multiplierResetPlayers = [];
+            // È il master! Resettiamo TUTTI gli effetti temporanei di TUTTI i giocatori
+            let resetMessages = [];
+            
             gameState.players.forEach((p, index) => {
-                if (p.multiplierAppliedBy === playerIndex && p.multiplier !== null) {
-                    multiplierResetPlayers.push(p.name);
+                let playerResetMessages = [];
+                
+                // Reset immortality if temporary
+                if (p.temporaryEffects.immortal && p.isImmortal) {
+                    p.isImmortal = false;
+                    playerResetMessages.push('⭐ immortalità');
+                }
+                
+                // Reset multipliers if temporary
+                if (p.temporaryEffects.multiplier && p.multiplier !== null) {
                     p.multiplier = null;
                     p.multiplierAppliedBy = null;
-                    if (p.temporaryEffects) {
-                        p.temporaryEffects.multiplier = false;
-                    }
+                    playerResetMessages.push('✨ moltiplicatore');
+                }
+                
+                // Reset custom dice if temporary
+                if (p.temporaryEffects.customDice && p.customDiceCount) {
+                    p.customDiceCount = null;
+                    playerResetMessages.push('🎲 dadi personalizzati');
+                }
+                
+                // Reset damage-to-heal if temporary
+                if (p.temporaryEffects.damageToHeal && p.damageToHeal) {
+                    p.damageToHeal = false;
+                    playerResetMessages.push('💫 conversione danni→cure');
+                }
+                
+                // Reset sun armor if temporary
+                if (p.temporaryEffects.sunArmor && p.sunArmor) {
+                    p.sunArmor = false;
+                    playerResetMessages.push('☀️ armatura del sole');
+                }
+                
+                // Reset moon armor if temporary
+                if (p.temporaryEffects.moonArmor && p.moonArmor) {
+                    p.moonArmor = false;
+                    playerResetMessages.push('🌙 armatura della luna');
+                }
+                
+                // Reset reflect damage if temporary
+                if (p.temporaryEffects.reflectDamage && p.reflectDamage) {
+                    p.reflectDamage = false;
+                    playerResetMessages.push('🛡️ rifletti danni');
+                }
+                
+                // Clear ALL temporary flags for this player
+                p.temporaryEffects = {
+                    immortal: false,
+                    multiplier: false,
+                    skipTurn: p.temporaryEffects.skipTurn, // Mantieni skipTurn
+                    customDice: false,
+                    damageToHeal: false,
+                    sunArmor: false,
+                    moonArmor: false,
+                    reflectDamage: false
+                };
+                
+                // Add to reset messages if this player had effects reset
+                if (playerResetMessages.length > 0) {
+                    resetMessages.push(`${p.name}: ${playerResetMessages.join(', ')}`);
                 }
             });
             
-            if (multiplierResetPlayers.length > 0) {
-                gameState.history.push(`⏱️ Moltiplicatori rimossi da: ${multiplierResetPlayers.join(', ')} (fine effetto di ${player.name})`);
-            }
-            
-            // Reset skip turn if temporary (but only after it was skipped)
-            // Skip turn will be handled separately in getNextActiveTurn
-            
-            // Reset custom dice if temporary (only for the player who just played)
-            if (player.temporaryEffects.customDice && player.customDiceCount) {
-                player.customDiceCount = null;
-                resetMessage.push('dadi personalizzati');
-            }
-            
-            // Reset damage-to-heal if temporary
-            if (player.temporaryEffects.damageToHeal && player.damageToHeal) {
-                player.damageToHeal = false;
-                resetMessage.push('conversione danni→cure');
-            }
-            
-            // Reset sun armor if temporary
-            if (player.temporaryEffects.sunArmor && player.sunArmor) {
-                player.sunArmor = false;
-                resetMessage.push('armatura del sole');
-            }
-            
-            // Reset moon armor if temporary
-            if (player.temporaryEffects.moonArmor && player.moonArmor) {
-                player.moonArmor = false;
-                resetMessage.push('armatura della luna');
-            }
-            
-            // Clear temporary flags for the player who just played
-            player.temporaryEffects = {
-                immortal: false,
-                multiplier: false,
-                skipTurn: player.temporaryEffects.skipTurn, // Mantieni skipTurn
-                customDice: false,
-                damageToHeal: false,
-                sunArmor: false,
-                moonArmor: false
-            };
-            
-            // Add history message if something was reset for this player
-            if (resetMessage.length > 0) {
-                gameState.history.push(`⏱️ ${player.name}: reset ${resetMessage.join(', ')}`);
+            // Add history message if something was reset
+            if (resetMessages.length > 0) {
+                gameState.history.push(`⏱️ Fine turno Master - Effetti temporanei rimossi:`);
+                resetMessages.forEach(msg => {
+                    gameState.history.push(`   • ${msg}`);
+                });
             }
         }
         
@@ -4300,6 +4447,70 @@
             const playerNames = selectedIndices.map(i => gameState.players[i].name).join(', ');
             const status = gameState.players[selectedIndices[0]].moonArmor ? 'indossata' : 'rimossa';
             gameState.history.push(`🌙 Armatura della Luna ${status} da: ${playerNames} (temp)`);
+            database.ref('games/' + gameState.gameCode + '/history').set(gameState.history);
+        }
+        
+        function activateHighTide() {
+            if (!gameState.isMaster) return;
+            
+            const threshold = parseInt(document.getElementById('high-tide-threshold').value);
+            
+            if (!threshold || threshold < 1) {
+                alert('Inserisci una soglia HP valida!');
+                return;
+            }
+            
+            // Trova l'indice del master
+            const masterIndex = gameState.players.findIndex(p => p.isMaster);
+            
+            // Attiva l'Alta Marea fino al prossimo turno del MASTER
+            database.ref('games/' + gameState.gameCode).update({
+                highTideActive: true,
+                highTideThreshold: threshold,
+                highTideTurnEnd: masterIndex  // Termina quando il master gioca di nuovo
+            });
+            
+            gameState.history.push(`🌊 Alta Marea attivata! Soglia: ${threshold} HP (dura fino al prossimo turno del Master)`);
+            database.ref('games/' + gameState.gameCode + '/history').set(gameState.history);
+            
+            // Mostra notifica
+            alert(`🌊 Alta Marea attivata!\n\nGiocatori sopra ${threshold} HP: danni ×2\nGiocatori sotto/uguale ${threshold} HP: danni ×0.5\n\nL'effetto dura fino al tuo prossimo turno.`);
+        }
+        
+        function toggleReflectDamage() {
+            if (!gameState.isMaster) return;
+            
+            const select = document.getElementById('reflect-damage-players');
+            const selectedIndices = Array.from(select.selectedOptions).map(opt => parseInt(opt.value));
+            const isTemporary = document.getElementById('reflect-damage-temporary').checked;
+            
+            if (selectedIndices.length === 0) {
+                alert('Seleziona almeno un giocatore!');
+                return;
+            }
+            
+            selectedIndices.forEach(index => {
+                const player = gameState.players[index];
+                player.reflectDamage = !player.reflectDamage;
+                
+                if (!player.temporaryEffects) player.temporaryEffects = {};
+                
+                // Se attivato e temporaneo, marca come temp
+                if (player.reflectDamage && isTemporary) {
+                    player.temporaryEffects.reflectDamage = true;
+                } else {
+                    player.temporaryEffects.reflectDamage = false;
+                }
+            });
+            
+            // Update Firebase
+            database.ref('games/' + gameState.gameCode + '/players').set(gameState.players);
+            
+            // Add to history
+            const playerNames = selectedIndices.map(i => gameState.players[i].name).join(', ');
+            const status = gameState.players[selectedIndices[0]].reflectDamage ? 'attivato' : 'disattivato';
+            const tempStatus = isTemporary && gameState.players[selectedIndices[0]].reflectDamage ? ' (temp)' : '';
+            gameState.history.push(`🛡️ Rifletti Danni ${status} per: ${playerNames}${tempStatus}`);
             database.ref('games/' + gameState.gameCode + '/history').set(gameState.history);
         }
     </script>
