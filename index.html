@@ -677,6 +677,58 @@
         .hidden {
             display: none;
         }
+        
+        /* Collapsible Master Sections */
+        .master-section {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+        
+        .master-section-header {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 215, 0, 0.05) 100%);
+            padding: 15px;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 215, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .master-section-header:hover {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.25) 0%, rgba(255, 215, 0, 0.15) 100%);
+        }
+        
+        .master-section-header h4 {
+            margin: 0;
+            font-size: 1.1em;
+            color: #ffd700;
+        }
+        
+        .master-section-toggle {
+            font-size: 1.2em;
+            transition: transform 0.3s ease;
+        }
+        
+        .master-section.collapsed .master-section-toggle {
+            transform: rotate(-90deg);
+        }
+        
+        .master-section-content {
+            padding: 15px;
+            max-height: 2000px;
+            overflow: hidden;
+            transition: max-height 0.3s ease, padding 0.3s ease;
+        }
+        
+        .master-section.collapsed .master-section-content {
+            max-height: 0;
+            padding: 0 15px;
+        }
 
         .leaderboard {
             background: linear-gradient(135deg, rgba(30, 30, 45, 0.8) 0%, rgba(20, 20, 35, 0.7) 100%);
@@ -1590,6 +1642,35 @@
                     <div id="result-text"></div>
                 </div>
             </div>
+            
+            <!-- Target Calculator (for all players) -->
+            <div class="dice-calculator" id="target-calculator" style="margin-top: 20px;">
+                <h3 style="color: #00d4ff; text-align: center;">🎯 Calcolatore Bersagli</h3>
+                <div style="font-size: 0.85em; color: #aaa; text-align: center; margin-bottom: 10px;">
+                    Simula chi colpiresti senza applicare danni
+                </div>
+                <div style="margin-bottom: 10px; text-align: center;">
+                    <label style="color: #fff; margin-right: 10px;">Numero Dadi:</label>
+                    <select id="target-dice-count" style="padding: 5px; border-radius: 5px; background: #2a2a3e; color: #fff; border: 1px solid #444;">
+                        <option value="1">1 dado</option>
+                        <option value="2">2 dadi</option>
+                        <option value="3" selected>3 dadi</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 10px; text-align: center;">
+                    <label style="color: #fff; margin-right: 10px;">Direzione:</label>
+                    <select id="target-direction" style="padding: 5px; border-radius: 5px; background: #2a2a3e; color: #fff; border: 1px solid #444;">
+                        <option value="1">⭮ Oraria</option>
+                        <option value="-1">⭯ Antioraria</option>
+                    </select>
+                </div>
+                <div class="dice-inputs" id="target-dice-inputs"></div>
+                <button id="calculate-target-btn" style="background: linear-gradient(135deg, #1a5490 0%, #2980b9 100%);">🎯 Calcola Bersaglio</button>
+                <div class="result-display hidden" id="target-result-display">
+                    <h3>Bersaglio</h3>
+                    <div id="target-result-text"></div>
+                </div>
+            </div>
 
             <!-- Players List -->
             <div class="players-list" id="players-list"></div>
@@ -1719,6 +1800,49 @@
                 </div>
                 
                 <div class="input-group">
+                    <label>⏰ Distorsione Temporale (effetto globale)</label>
+                    <button id="activate-time-distortion-btn" style="background: linear-gradient(135deg, #4a0080 0%, #9b59b6 100%); border: 2px solid #e74c3c;">⏰ Attiva Distorsione</button>
+                    <div style="font-size: 0.85em; color: #e74c3c; margin-top: 8px; padding: 8px; background: rgba(231,76,60,0.15); border-radius: 8px;">
+                        ⚠️ <strong>Partita finisce tra 3 turni!</strong> Se un giocatore perde tutti gli HP prima, vince chi ne ha di più
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label>🪃 Boomerang (seleziona un giocatore)</label>
+                    <select id="boomerang-player"></select>
+                    <button id="activate-boomerang-btn" style="background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%);">🪃 Attiva Boomerang</button>
+                    <div style="font-size: 0.85em; color: #e74c3c; margin-top: 8px; padding: 8px; background: rgba(231,76,60,0.15); border-radius: 8px;">
+                        💡 Dura 1 turno - Non subisce danni e li distribuisce a tutti gli altri
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label>🦓 Zebratura (effetto globale)</label>
+                    <button id="toggle-zebra-pattern-btn" style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); border: 2px solid #ecf0f1;">🦓 Attiva/Disattiva Zebratura</button>
+                    <div style="font-size: 0.85em; color: #ecf0f1; margin-top: 8px; padding: 8px; background: rgba(44,62,80,0.3); border-radius: 8px;">
+                        💡 Somme pari curano, somme dispari danneggiano
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label>🪞 Armatura a Specchio (seleziona uno o più giocatori)</label>
+                    <select id="mirror-armor-players" multiple size="5"></select>
+                    <button id="toggle-mirror-armor-btn" style="background: linear-gradient(135deg, #16a085 0%, #1abc9c 100%);">🪞 Attiva/Disattiva Armatura Specchio</button>
+                    <div style="font-size: 0.85em; color: #1abc9c; margin-top: 8px; padding: 8px; background: rgba(26,188,156,0.15); border-radius: 8px;">
+                        💡 Dura 1 turno - Il danno viene diviso tra tutti i giocatori vivi
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label>🦠 Contagio (seleziona giocatore ESENTE)</label>
+                    <select id="contagion-exempt-player"></select>
+                    <button id="activate-contagion-btn" style="background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%); border: 2px solid #f39c12;">🦠 Attiva Contagio</button>
+                    <div style="font-size: 0.85em; color: #f39c12; margin-top: 8px; padding: 8px; background: rgba(243,156,18,0.15); border-radius: 8px;">
+                        💡 Permanente - Chi viene eliminato infligge i suoi HP persi a tutti (tranne esente)
+                    </div>
+                </div>
+                
+                <div class="input-group">
                     <label>Dadi Personalizzati (seleziona uno o più giocatori)</label>
                     <select id="custom-dice-players" multiple size="5"></select>
                     <div class="hp-modifier">
@@ -1779,7 +1903,7 @@
     <script>
         // Firebase Configuration
         const firebaseConfig = {
-  apiKey: "AIzaSyAv1tYe2jwc3abq128Ci5PvJK1HTTuF3tY",
+   apiKey: "AIzaSyAv1tYe2jwc3abq128Ci5PvJK1HTTuF3tY",
   authDomain: "gioco-del-fato.firebaseapp.com",
   databaseURL: "https://gioco-del-fato-default-rtdb.europe-west1.firebasedatabase.app",
   projectId: "gioco-del-fato",
@@ -1907,6 +2031,13 @@
         document.getElementById('toggle-moon-armor-btn')?.addEventListener('click', toggleMoonArmor);
         document.getElementById('activate-high-tide-btn')?.addEventListener('click', activateHighTide);
         document.getElementById('toggle-reflect-damage-btn')?.addEventListener('click', toggleReflectDamage);
+        document.getElementById('activate-time-distortion-btn')?.addEventListener('click', activateTimeDistortion);
+        document.getElementById('activate-boomerang-btn')?.addEventListener('click', activateBoomerang);
+        document.getElementById('toggle-zebra-pattern-btn')?.addEventListener('click', toggleZebraPattern);
+        document.getElementById('toggle-mirror-armor-btn')?.addEventListener('click', toggleMirrorArmor);
+        document.getElementById('activate-contagion-btn')?.addEventListener('click', activateContagion);
+        document.getElementById('calculate-target-btn')?.addEventListener('click', calculateTarget);
+        document.getElementById('target-dice-count')?.addEventListener('change', renderTargetDiceInputs);
         
         // Close modal clicking outside
         document.getElementById('qr-modal')?.addEventListener('click', function(e) {
@@ -2086,6 +2217,10 @@
                 sunArmor: false,
                 moonArmor: false,
                 reflectDamage: false,
+                boomerang: false,
+                boomerangDamageAccumulated: 0,
+                mirrorArmor: false,
+                contagionExempt: false,
                 temporaryEffects: {
                     immortal: false,
                     multiplier: false,
@@ -2094,7 +2229,9 @@
                     damageToHeal: false,
                     sunArmor: false,
                     moonArmor: false,
-                    reflectDamage: false
+                    reflectDamage: false,
+                    boomerang: false,
+                    mirrorArmor: false
                 }
             }];
             
@@ -2119,6 +2256,10 @@
                         sunArmor: false,
                         moonArmor: false,
                         reflectDamage: false,
+                        boomerang: false,
+                        boomerangDamageAccumulated: 0,
+                        mirrorArmor: false,
+                        contagionExempt: false,
                         temporaryEffects: {
                             immortal: false,
                             multiplier: false,
@@ -2127,7 +2268,9 @@
                             damageToHeal: false,
                             sunArmor: false,
                             moonArmor: false,
-                            reflectDamage: false
+                            reflectDamage: false,
+                            boomerang: false,
+                            mirrorArmor: false
                         }
                     });
                 }
@@ -2157,7 +2300,13 @@
                 initialHP: initialHP,
                 highTideActive: false,
                 highTideThreshold: null,
-                highTideTurnEnd: null
+                highTideTurnEnd: null,
+                zebraPatternActive: false,
+                contagionActive: false,
+                contagionExemptIndex: null,
+                timeDistortionActive: false,
+                timeDistortionTurnsRemaining: null,
+                timeDistortionInitiator: null
             };
 
             database.ref('games/' + code).set(gameData).then(() => {
@@ -2270,6 +2419,7 @@
             }
 
             renderDiceInputs();
+            renderTargetDiceInputs();
         }
 
         function listenToGameChanges(code) {
@@ -2288,6 +2438,12 @@
                 gameState.highTideActive = data.highTideActive || false;
                 gameState.highTideThreshold = data.highTideThreshold || null;
                 gameState.highTideTurnEnd = data.highTideTurnEnd || null;
+                gameState.zebraPatternActive = data.zebraPatternActive || false;
+                gameState.contagionActive = data.contagionActive || false;
+                gameState.contagionExemptIndex = data.contagionExemptIndex || null;
+                gameState.timeDistortionActive = data.timeDistortionActive || false;
+                gameState.timeDistortionTurnsRemaining = data.timeDistortionTurnsRemaining || null;
+                gameState.timeDistortionInitiator = data.timeDistortionInitiator || null;
                 
                 // Update High Tide indicator
                 const highTideIndicator = document.getElementById('high-tide-indicator');
@@ -2358,7 +2514,7 @@
                 
                 card.innerHTML = `
                     <div class="player-info">
-                        <div class="player-name">${player.name}${player.isMaster ? ' 👑' : ''}${player.isImmortal ? ' ⭐' : ''}${(player.multiplier > 1 || player.multiplier < 1) ? ' ✨x' + player.multiplier : ''}${player.skipTurn ? ' ⏭️' : ''}${player.customDiceCount ? ' 🎲×' + player.customDiceCount : ''}${player.krakenMark ? ' 🐙' : ''}${player.checkmateHP ? ' ♟️' : ''}${player.damageToHeal ? ' 💫' : ''}${player.sunArmor ? ' ☀️' : ''}${player.moonArmor ? ' 🌙' : ''}${player.reflectDamage ? ' 🛡️' : ''}</div>
+                        <div class="player-name">${player.name}${player.isMaster ? ' 👑' : ''}${player.isImmortal ? ' ⭐' : ''}${(player.multiplier > 1 || player.multiplier < 1) ? ' ✨x' + player.multiplier : ''}${player.skipTurn ? ' ⏭️' : ''}${player.customDiceCount ? ' 🎲×' + player.customDiceCount : ''}${player.krakenMark ? ' 🐙' : ''}${player.checkmateHP ? ' ♟️' : ''}${player.damageToHeal ? ' 💫' : ''}${player.sunArmor ? ' ☀️' : ''}${player.moonArmor ? ' 🌙' : ''}${player.reflectDamage ? ' 🛡️' : ''}${player.boomerang ? ' 🪃' : ''}${player.mirrorArmor ? ' 🪞' : ''}${player.contagionExempt ? ' 🦠' : ''}</div>
                         <div class="player-hp ${hpClass}">${player.hp} HP</div>
                     </div>
                     ${player.isEliminated ? '<div style="color: #dc3545; margin-top: 5px;">☠️ Eliminato</div>' : ''}
@@ -2372,6 +2528,9 @@
                     ${player.sunArmor ? '<div style="color: #ffa500; margin-top: 5px;">☀️ Armatura del Sole (temp)</div>' : ''}
                     ${player.moonArmor ? '<div style="color: #87ceeb; margin-top: 5px;">🌙 Armatura della Luna (temp)</div>' : ''}
                     ${player.reflectDamage ? '<div style="color: #ff6b6b; margin-top: 5px; font-weight: bold;">🛡️ Rifletti Danni' + (player.temporaryEffects?.reflectDamage ? ' (temp)' : '') + '</div>' : ''}
+                    ${player.boomerang ? '<div style="color: #e74c3c; margin-top: 5px; font-weight: bold;">🪃 Boomerang (temp)</div>' : ''}
+                    ${player.mirrorArmor ? '<div style="color: #1abc9c; margin-top: 5px;">🪞 Armatura a Specchio (temp)</div>' : ''}
+                    ${player.contagionExempt ? '<div style="color: #2ecc71; margin-top: 5px;">🦠 Contagio ESENTE</div>' : ''}
                 `;
                 
                 container.appendChild(card);
@@ -2479,6 +2638,22 @@
                 indicator.style.cssText = 'color: #00ffff; font-size: 0.9em; margin-top: 10px; text-align: center;';
                 indicator.textContent = `🎲 Dadi personalizzati: ${currentPlayer.customDiceCount} (questo turno)`;
                 container.appendChild(indicator);
+            }
+        }
+
+        function renderTargetDiceInputs() {
+            const container = document.getElementById('target-dice-inputs');
+            container.innerHTML = '';
+            
+            // Leggi il numero di dadi selezionato
+            const diceCountSelect = document.getElementById('target-dice-count');
+            const diceCount = diceCountSelect ? parseInt(diceCountSelect.value) : 3;
+            
+            for (let i = 0; i < diceCount; i++) {
+                const div = document.createElement('div');
+                div.className = 'dice-input';
+                div.innerHTML = `<input type="number" min="1" max="6" id="target-dice-${i}" placeholder="D${i + 1}">`;
+                container.appendChild(div);
             }
         }
 
@@ -2679,6 +2854,48 @@
                     option.textContent = player.name + (player.reflectDamage ? ' 🛡️' : '');
                     if (player.reflectDamage) option.selected = true;
                     reflectDamageSelect.appendChild(option);
+                });
+            }
+            
+            // Update boomerang select
+            const boomerangSelect = document.getElementById('boomerang-player');
+            if (boomerangSelect) {
+                boomerangSelect.innerHTML = '';
+                gameState.players.forEach((player, index) => {
+                    if (!player.isEliminated) {
+                        const option = document.createElement('option');
+                        option.value = index;
+                        option.textContent = player.name + (player.boomerang ? ' 🪃' : '');
+                        boomerangSelect.appendChild(option);
+                    }
+                });
+            }
+            
+            // Update mirror armor select
+            const mirrorArmorSelect = document.getElementById('mirror-armor-players');
+            if (mirrorArmorSelect) {
+                mirrorArmorSelect.innerHTML = '';
+                gameState.players.forEach((player, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = player.name + (player.mirrorArmor ? ' 🪞' : '');
+                    if (player.mirrorArmor) option.selected = true;
+                    mirrorArmorSelect.appendChild(option);
+                });
+            }
+            
+            // Update contagion exempt select
+            const contagionSelect = document.getElementById('contagion-exempt-player');
+            if (contagionSelect) {
+                contagionSelect.innerHTML = '';
+                gameState.players.forEach((player, index) => {
+                    if (!player.isEliminated) {
+                        const option = document.createElement('option');
+                        option.value = index;
+                        option.textContent = player.name + (player.contagionExempt ? ' (ESENTE)' : '');
+                        if (player.contagionExempt) option.selected = true;
+                        contagionSelect.appendChild(option);
+                    }
                 });
             }
         }
@@ -2896,8 +3113,46 @@
 
             // Apply damage
             if (target) {
+                // Calculate multipliers first
+                let multiplier = target.multiplier || 1;
+                
+                // Apply High Tide effect if active
+                if (gameState.highTideActive && gameState.highTideThreshold) {
+                    if (target.hp > gameState.highTideThreshold) {
+                        multiplier *= 2;
+                    } else {
+                        multiplier *= 0.5;
+                    }
+                }
+                
+                const damageAfterMultipliers = Math.ceil(result.damage * multiplier);
+                
+                // BOOMERANG: Accumula danno DOPO tutti i moltiplicatori, verrà redistribuito all'inizio del suo turno
+                if (target.boomerang) {
+                    target.boomerangDamageAccumulated += damageAfterMultipliers;
+                    
+                    if (gameState.highTideActive && gameState.highTideThreshold) {
+                        if (target.hp > gameState.highTideThreshold) {
+                            gameState.history.push(`🌊 Alta Marea: ${target.name} (${target.hp} HP > ${gameState.highTideThreshold}) - danno ×2`);
+                        } else {
+                            gameState.history.push(`🌊 Alta Marea: ${target.name} (${target.hp} HP ≤ ${gameState.highTideThreshold}) - danno ×0.5`);
+                        }
+                    }
+                    
+                    gameState.history.push(`🪃 ${target.name} respinge l'attacco con Boomerang! Danno accumulato: ${target.boomerangDamageAccumulated}`);
+                    animateHP(result.targetIndex, 0, 'armor');
+                    playSound('heal');
+                    
+                    if (target.name === gameState.playerName) {
+                        screenFlash('heal');
+                        createParticles(window.innerWidth / 2, window.innerHeight / 2, 'heal');
+                    }
+                    
+                    // NO DAMAGE DEALT = NO SELF HEAL for Tris
+                    actualDamageDealt = 0;
+                }
                 // Check if target is immortal
-                if (target.isImmortal) {
+                else if (target.isImmortal) {
                     // Immortal player takes no damage
                     gameState.history.push(`⭐ ${target.name} è immortale e non subisce danni!`);
                     animateHP(result.targetIndex, 0, 'immortal'); // Animazione immortalità!
@@ -2943,21 +3198,33 @@
                     
                     const wasAlive = !target.isEliminated;
                     
+                    // ZEBRATURA: Inverti danno e cura in base alla somma pari/dispari
+                    let zebraturaActive = gameState.zebraPatternActive;
+                    let isEvenSum = result.sum % 2 === 0;
+                    
                     // Check for damage conversion effects
                     let shouldConvertToHeal = false;
                     let conversionReason = '';
                     
-                    // 1. Conversione Danni→Cure (💫) - Converte TUTTI i danni
-                    if (target.damageToHeal) {
+                    // PRIORITÀ 1: Zebratura (se attiva, sovrascrive tutto)
+                    if (zebraturaActive) {
+                        if (isEvenSum) {
+                            shouldConvertToHeal = true;
+                            conversionReason = `🦓 Zebratura (somma ${result.sum} pari)`;
+                        }
+                        // Se dispari, il danno rimane normale
+                    }
+                    // PRIORITÀ 2: Conversione Danni→Cure (💫) - Converte TUTTI i danni
+                    else if (target.damageToHeal) {
                         shouldConvertToHeal = true;
                         conversionReason = '💫 Conversione Danni→Cure';
                     }
-                    // 2. Armatura del Sole (☀️) - Converte solo danni DISPARI
+                    // PRIORITÀ 3: Armatura del Sole (☀️) - Converte solo danni DISPARI
                     else if (target.sunArmor && actualDamage % 2 !== 0) {
                         shouldConvertToHeal = true;
                         conversionReason = `☀️ Armatura del Sole (${actualDamage} dispari)`;
                     }
-                    // 3. Armatura della Luna (🌙) - Converte solo danni PARI
+                    // PRIORITÀ 4: Armatura della Luna (🌙) - Converte solo danni PARI
                     else if (target.moonArmor && actualDamage % 2 === 0) {
                         shouldConvertToHeal = true;
                         conversionReason = `🌙 Armatura della Luna (${actualDamage} pari)`;
@@ -2993,7 +3260,35 @@
                         // Track actual damage for Tris self-heal
                         actualDamageDealt = actualDamage;
                         
-                        target.hp = Math.max(0, target.hp - actualDamage);
+                        // ARMATURA A SPECCHIO: Dividi il danno tra tutti i giocatori vivi (incluso il bersaglio)
+                        if (target.mirrorArmor && !target.isEliminated) {
+                            const alivePlayers = gameState.players.filter(p => !p.isEliminated);
+                            const damagePerPlayer = Math.ceil(actualDamage / alivePlayers.length);
+                            
+                            gameState.history.push(`🪞 ${target.name} usa Armatura a Specchio! Danno ${actualDamage} diviso tra ${alivePlayers.length} giocatori (${damagePerPlayer} HP ciascuno)`);
+                            
+                            alivePlayers.forEach((p, idx) => {
+                                const playerIndex = gameState.players.indexOf(p);
+                                p.hp = Math.max(0, p.hp - damagePerPlayer);
+                                gameState.history.push(`🪞 ${p.name} subisce ${damagePerPlayer} HP dall'Armatura a Specchio`);
+                                animateHP(playerIndex, -damagePerPlayer);
+                                
+                                // Check eliminazioni
+                                if (p.hp === 0 && !p.isEliminated) {
+                                    p.isEliminated = true;
+                                    gameState.history.push(`☠️ ${p.name} è stato eliminato dall'Armatura a Specchio!`);
+                                    
+                                    if (p.name === gameState.playerName && !gameState.isMaster) {
+                                        setTimeout(() => showEliminatedNotification(), 500);
+                                    }
+                                    
+                                    clearPlayerEffects(playerIndex);
+                                }
+                            });
+                        } else {
+                            // Danno normale (senza Armatura a Specchio)
+                            target.hp = Math.max(0, target.hp - actualDamage);
+                        }
                         
                         // Check Checkmate - auto-eliminate at exact HP value
                         if (target.checkmateHP && target.hp === target.checkmateHP && !target.isEliminated) {
@@ -3026,6 +3321,81 @@
                             playSound('elimination');
                         } else if (target.hp === 0 && wasAlive) {
                             target.isEliminated = true;
+                            
+                            // DISTORSIONE TEMPORALE: Se attiva e il GIOCATORE CHE L'HA ATTIVATA viene eliminato, termina subito
+                            if (gameState.timeDistortionActive && result.targetIndex === gameState.timeDistortionInitiator) {
+                                const alivePlayers = gameState.players.filter(p => !p.isEliminated);
+                                
+                                if (alivePlayers.length > 0) {
+                                    const winner = alivePlayers.reduce((max, p) => p.hp > max.hp ? p : max, alivePlayers[0]);
+                                    
+                                    gameState.history.push(`☠️ ${target.name} (iniziatore) eliminato durante Distorsione Temporale!`);
+                                    gameState.history.push(`⏰ DISTORSIONE TEMPORALE: FINE PARTITA!`);
+                                    gameState.history.push(`🏆 ${winner.name} vince con ${winner.hp} HP!`);
+                                    
+                                    database.ref('games/' + gameState.gameCode).update({
+                                        history: gameState.history,
+                                        gameEnded: true,
+                                        winner: winner.name,
+                                        stats: gameState.stats,
+                                        timeDistortionActive: false,
+                                        timeDistortionTurnsRemaining: null,
+                                        timeDistortionInitiator: null
+                                    });
+                                    
+                                    playSound('poker');
+                                    
+                                    setTimeout(() => {
+                                        const isYou = winner.name === gameState.playerName;
+                                        showWinnerNotification(winner.name, isYou);
+                                    }, 1000);
+                                    
+                                    return;
+                                }
+                            }
+                            
+                            // CONTAGIO: Se attivo, il giocatore eliminato infligge danno a tutti gli altri (1 SOLA VOLTA)
+                            if (gameState.contagionActive && !target.contagionExempt) {
+                                const contagionDamage = actualDamage;
+                                const affectedPlayers = gameState.players.filter(p => 
+                                    !p.isEliminated && 
+                                    p !== target && 
+                                    !p.contagionExempt
+                                );
+                                
+                                gameState.history.push(`🦠 CONTAGIO! ${target.name} eliminato, infligge ${contagionDamage} HP a tutti!`);
+                                
+                                affectedPlayers.forEach(p => {
+                                    const pIndex = gameState.players.indexOf(p);
+                                    p.hp = Math.max(0, p.hp - contagionDamage);
+                                    animateHP(pIndex, -contagionDamage);
+                                    gameState.history.push(`🦠 ${p.name} subisce ${contagionDamage} HP dal Contagio`);
+                                    
+                                    // Check eliminazioni dal contagio
+                                    if (p.hp === 0 && !p.isEliminated) {
+                                        p.isEliminated = true;
+                                        gameState.history.push(`☠️ ${p.name} è stato eliminato dal Contagio!`);
+                                        
+                                        if (p.name === gameState.playerName && !gameState.isMaster) {
+                                            setTimeout(() => showEliminatedNotification(), 500);
+                                        }
+                                        
+                                        // Pulizia effetti del giocatore eliminato
+                                        clearPlayerEffects(pIndex);
+                                    }
+                                });
+                                
+                                // DISATTIVA CONTAGIO DOPO 1 SOLA ATTIVAZIONE
+                                database.ref('games/' + gameState.gameCode).update({
+                                    contagionActive: false,
+                                    contagionExemptIndex: null
+                                });
+                                gameState.contagionActive = false;
+                                gameState.history.push(`🦠 Contagio si è esaurito dopo l'attivazione`);
+                            }
+                            
+                            // Pulizia effetti del giocatore eliminato
+                            clearPlayerEffects(result.targetIndex);
                             
                             // Show elimination notification to the eliminated player
                             if (target.name === gameState.playerName && !gameState.isMaster) {
@@ -3123,7 +3493,38 @@
             // Next turn
             const nextTurn = getNextActiveTurn();
             
-            // Check if High Tide should end (after 1 turn)
+            // BOOMERANG: Distribuisci il danno accumulato all'inizio del turno del giocatore
+            const nextPlayer = gameState.players[nextTurn];
+            if (nextPlayer.boomerang && nextPlayer.boomerangDamageAccumulated > 0) {
+                const boomerangDamage = nextPlayer.boomerangDamageAccumulated;
+                const targets = gameState.players.filter(p => !p.isEliminated && p !== nextPlayer);
+                
+                gameState.history.push(`🪃 ${nextPlayer.name} rilascia il Boomerang! ${boomerangDamage} HP distribuiti a tutti!`);
+                
+                targets.forEach(p => {
+                    const pIndex = gameState.players.indexOf(p);
+                    p.hp = Math.max(0, p.hp - boomerangDamage);
+                    animateHP(pIndex, -boomerangDamage);
+                    gameState.history.push(`🪃 ${p.name} subisce ${boomerangDamage} HP dal Boomerang`);
+                    
+                    // Check eliminazioni
+                    if (p.hp === 0 && !p.isEliminated) {
+                        p.isEliminated = true;
+                        gameState.history.push(`☠️ ${p.name} è stato eliminato dal Boomerang!`);
+                        
+                        if (p.name === gameState.playerName && !gameState.isMaster) {
+                            setTimeout(() => showEliminatedNotification(), 500);
+                        }
+                        
+                        clearPlayerEffects(pIndex);
+                    }
+                });
+                
+                // Reset boomerang accumulator
+                nextPlayer.boomerangDamageAccumulated = 0;
+            }
+            
+            // Check if High Tide should end (decrement counter)
             let updateData = {
                 players: gameState.players,
                 currentTurn: nextTurn,
@@ -3131,8 +3532,44 @@
                 stats: gameState.stats
             };
             
+            // DISTORSIONE TEMPORALE: Decrementa turni e controlla fine partita
+            if (gameState.timeDistortionActive && gameState.timeDistortionTurnsRemaining !== undefined) {
+                const newRemaining = gameState.timeDistortionTurnsRemaining - 1;
+                
+                if (newRemaining <= 0) {
+                    // Fine partita per Distorsione Temporale
+                    const alivePlayers = gameState.players.filter(p => !p.isEliminated);
+                    
+                    if (alivePlayers.length > 0) {
+                        // Trova il giocatore con più HP
+                        const winner = alivePlayers.reduce((max, p) => p.hp > max.hp ? p : max, alivePlayers[0]);
+                        
+                        gameState.history.push(`⏰ DISTORSIONE TEMPORALE TERMINATA!`);
+                        gameState.history.push(`🏆 ${winner.name} vince con ${winner.hp} HP!`);
+                        
+                        updateData.gameEnded = true;
+                        updateData.winner = winner.name;
+                        updateData.timeDistortionActive = false;
+                        updateData.timeDistortionTurnsRemaining = null;
+                        
+                        database.ref('games/' + gameState.gameCode).update(updateData);
+                        
+                        setTimeout(() => {
+                            const isYou = winner.name === gameState.playerName;
+                            showWinnerNotification(winner.name, isYou);
+                        }, 1000);
+                        
+                        return;
+                    }
+                } else {
+                    updateData.timeDistortionTurnsRemaining = newRemaining;
+                    gameState.history.push(`⏰ Distorsione Temporale: ${newRemaining} turni rimanenti`);
+                }
+            }
+            
+            // Alta Marea: controlla se è il turno del master (chi ha attivato)
             if (gameState.highTideActive && gameState.highTideTurnEnd === gameState.currentTurn) {
-                // High Tide ends after this turn
+                // Alta Marea termina dopo questo turno (il master ha giocato di nuovo)
                 updateData.highTideActive = false;
                 updateData.highTideThreshold = null;
                 updateData.highTideTurnEnd = null;
@@ -4271,6 +4708,19 @@
                     playerResetMessages.push('🛡️ rifletti danni');
                 }
                 
+                // Reset boomerang if temporary
+                if (p.temporaryEffects.boomerang && p.boomerang) {
+                    p.boomerang = false;
+                    p.boomerangDamageAccumulated = 0;
+                    playerResetMessages.push('🪃 boomerang');
+                }
+                
+                // Reset mirror armor if temporary
+                if (p.temporaryEffects.mirrorArmor && p.mirrorArmor) {
+                    p.mirrorArmor = false;
+                    playerResetMessages.push('🪞 armatura a specchio');
+                }
+                
                 // Clear ALL temporary flags for this player
                 p.temporaryEffects = {
                     immortal: false,
@@ -4280,7 +4730,9 @@
                     damageToHeal: false,
                     sunArmor: false,
                     moonArmor: false,
-                    reflectDamage: false
+                    reflectDamage: false,
+                    boomerang: false,
+                    mirrorArmor: false
                 };
                 
                 // Add to reset messages if this player had effects reset
@@ -4460,21 +4912,21 @@
                 return;
             }
             
-            // Trova l'indice del master
-            const masterIndex = gameState.players.findIndex(p => p.isMaster);
+            // L'Alta Marea si attiva nel turno del giocatore corrente e dura fino al suo prossimo turno
+            const currentPlayerIndex = gameState.currentTurn;
             
-            // Attiva l'Alta Marea fino al prossimo turno del MASTER
             database.ref('games/' + gameState.gameCode).update({
                 highTideActive: true,
                 highTideThreshold: threshold,
-                highTideTurnEnd: masterIndex  // Termina quando il master gioca di nuovo
+                highTideTurnEnd: currentPlayerIndex  // Termina quando questo giocatore gioca di nuovo
             });
             
-            gameState.history.push(`🌊 Alta Marea attivata! Soglia: ${threshold} HP (dura fino al prossimo turno del Master)`);
+            const activatorName = gameState.players[currentPlayerIndex].name;
+            gameState.history.push(`🌊 Alta Marea attivata! Soglia: ${threshold} HP (dura fino al prossimo turno di ${activatorName})`);
             database.ref('games/' + gameState.gameCode + '/history').set(gameState.history);
             
             // Mostra notifica
-            alert(`🌊 Alta Marea attivata!\n\nGiocatori sopra ${threshold} HP: danni ×2\nGiocatori sotto/uguale ${threshold} HP: danni ×0.5\n\nL'effetto dura fino al tuo prossimo turno.`);
+            alert(`🌊 Alta Marea attivata!\n\nGiocatori sopra ${threshold} HP: danni ×2\nGiocatori sotto/uguale ${threshold} HP: danni ×0.5\n\nL'effetto dura fino al prossimo turno di ${activatorName}.`);
         }
         
         function toggleReflectDamage() {
@@ -4512,6 +4964,265 @@
             const tempStatus = isTemporary && gameState.players[selectedIndices[0]].reflectDamage ? ' (temp)' : '';
             gameState.history.push(`🛡️ Rifletti Danni ${status} per: ${playerNames}${tempStatus}`);
             database.ref('games/' + gameState.gameCode + '/history').set(gameState.history);
+        }
+        
+        // ========== NUOVE MECCANICHE ==========
+        
+        function activateTimeDistortion() {
+            if (!gameState.isMaster) return;
+            
+            if (gameState.timeDistortionActive) {
+                // Disattiva
+                database.ref('games/' + gameState.gameCode).update({
+                    timeDistortionActive: false,
+                    timeDistortionTurnsRemaining: null,
+                    timeDistortionInitiator: null
+                });
+                
+                gameState.history.push(`⏰ Distorsione Temporale DISATTIVATA`);
+                database.ref('games/' + gameState.gameCode + '/history').set(gameState.history);
+                
+                alert('⏰ Distorsione Temporale disattivata!');
+                return;
+            }
+            
+            const currentPlayerIndex = gameState.currentTurn;
+            
+            // Attiva distorsione per 3 turni
+            database.ref('games/' + gameState.gameCode).update({
+                timeDistortionActive: true,
+                timeDistortionTurnsRemaining: 3, // Solo 3 turni
+                timeDistortionInitiator: currentPlayerIndex // Chi ha attivato
+            });
+            
+            gameState.history.push(`⏰ DISTORSIONE TEMPORALE ATTIVATA! La partita finisce tra 3 turni!`);
+            database.ref('games/' + gameState.gameCode + '/history').set(gameState.history);
+            
+            alert('⏰ DISTORSIONE TEMPORALE ATTIVATA!\n\nLa partita terminerà automaticamente tra 3 turni.\n\nSe il giocatore che ha attivato viene eliminato, vince chi ha più HP!');
+        }
+        
+        function activateBoomerang() {
+            if (!gameState.isMaster) return;
+            
+            const select = document.getElementById('boomerang-player');
+            const selectedIndex = parseInt(select.value);
+            
+            if (isNaN(selectedIndex)) {
+                alert('Seleziona un giocatore!');
+                return;
+            }
+            
+            const player = gameState.players[selectedIndex];
+            player.boomerang = true;
+            player.boomerangDamageAccumulated = 0;
+            
+            if (!player.temporaryEffects) player.temporaryEffects = {};
+            player.temporaryEffects.boomerang = true;
+            
+            // Update Firebase
+            database.ref('games/' + gameState.gameCode + '/players').set(gameState.players);
+            
+            gameState.history.push(`🪃 Boomerang attivato per: ${player.name} (temp - 1 turno)`);
+            database.ref('games/' + gameState.gameCode + '/history').set(gameState.history);
+            
+            alert(`🪃 Boomerang attivato per ${player.name}!\n\nPer 1 turno non subirà danni e li distribuirà a tutti gli altri giocatori.`);
+        }
+        
+        function toggleZebraPattern() {
+            if (!gameState.isMaster) return;
+            
+            const newStatus = !gameState.zebraPatternActive;
+            
+            database.ref('games/' + gameState.gameCode).update({
+                zebraPatternActive: newStatus
+            });
+            
+            const status = newStatus ? 'attivata' : 'disattivata';
+            gameState.history.push(`🦓 Zebratura ${status}! ${newStatus ? 'Somme pari curano, dispari danneggiano' : ''}`);
+            database.ref('games/' + gameState.gameCode + '/history').set(gameState.history);
+            
+            alert(`🦓 Zebratura ${status}!\n\n${newStatus ? 'Somme PARI curano\nSomme DISPARI danneggiano' : 'Meccanica normale ripristinata'}`);
+        }
+        
+        function toggleMirrorArmor() {
+            if (!gameState.isMaster) return;
+            
+            const select = document.getElementById('mirror-armor-players');
+            const selectedIndices = Array.from(select.selectedOptions).map(opt => parseInt(opt.value));
+            
+            if (selectedIndices.length === 0) {
+                alert('Seleziona almeno un giocatore!');
+                return;
+            }
+            
+            selectedIndices.forEach(index => {
+                const player = gameState.players[index];
+                player.mirrorArmor = !player.mirrorArmor;
+                
+                if (!player.temporaryEffects) player.temporaryEffects = {};
+                player.temporaryEffects.mirrorArmor = player.mirrorArmor;
+            });
+            
+            // Update Firebase
+            database.ref('games/' + gameState.gameCode + '/players').set(gameState.players);
+            
+            const playerNames = selectedIndices.map(i => gameState.players[i].name).join(', ');
+            const status = gameState.players[selectedIndices[0]].mirrorArmor ? 'attivata' : 'disattivata';
+            gameState.history.push(`🪞 Armatura a Specchio ${status} per: ${playerNames} (temp)`);
+            database.ref('games/' + gameState.gameCode + '/history').set(gameState.history);
+        }
+        
+        function activateContagion() {
+            if (!gameState.isMaster) return;
+            
+            if (gameState.contagionActive) {
+                // Disattiva contagio
+                database.ref('games/' + gameState.gameCode).update({
+                    contagionActive: false,
+                    contagionExemptIndex: null
+                });
+                
+                // Reset flag dai giocatori
+                gameState.players.forEach(p => p.contagionExempt = false);
+                database.ref('games/' + gameState.gameCode + '/players').set(gameState.players);
+                
+                gameState.history.push('🦠 Contagio disattivato');
+                database.ref('games/' + gameState.gameCode + '/history').set(gameState.history);
+                
+                alert('🦠 Contagio disattivato!');
+                return;
+            }
+            
+            const select = document.getElementById('contagion-exempt-player');
+            const exemptIndex = parseInt(select.value);
+            
+            if (isNaN(exemptIndex)) {
+                alert('Seleziona il giocatore esente!');
+                return;
+            }
+            
+            // Reset tutti
+            gameState.players.forEach(p => p.contagionExempt = false);
+            // Marca esente
+            gameState.players[exemptIndex].contagionExempt = true;
+            
+            database.ref('games/' + gameState.gameCode).update({
+                contagionActive: true,
+                contagionExemptIndex: exemptIndex
+            });
+            
+            database.ref('games/' + gameState.gameCode + '/players').set(gameState.players);
+            
+            const exemptName = gameState.players[exemptIndex].name;
+            gameState.history.push(`🦠 Contagio attivato! Esente: ${exemptName}`);
+            database.ref('games/' + gameState.gameCode + '/history').set(gameState.history);
+            
+            alert(`🦠 Contagio attivato!\n\nGiocatore esente: ${exemptName}\n\nChi viene eliminato infligge il danno subito a tutti gli altri (tranne ${exemptName}).`);
+        }
+        
+        function calculateTarget() {
+            // Funzione disponibile per TUTTI i giocatori
+            const diceCountSelect = document.getElementById('target-dice-count');
+            const diceCount = diceCountSelect ? parseInt(diceCountSelect.value) : 3;
+            
+            const inputs = [];
+            for (let i = 0; i < diceCount; i++) {
+                const input = document.getElementById(`target-dice-${i}`);
+                if (input) inputs.push(input);
+            }
+            
+            const dice = inputs.map(input => parseInt(input.value)).filter(val => val >= 1 && val <= 6);
+            
+            if (dice.length === 0 || dice.length !== diceCount) {
+                alert(`Inserisci valori validi per tutti i ${diceCount} dadi (1-6)!`);
+                return;
+            }
+            
+            const sum = dice.reduce((a, b) => a + b, 0);
+            const currentPlayerIndex = gameState.currentTurn;
+            
+            // Leggi direzione personalizzata
+            const directionSelect = document.getElementById('target-direction');
+            const customDirection = directionSelect ? parseInt(directionSelect.value) : 1;
+            
+            // Usa logica custom di findTarget con direzione personalizzata
+            const targetIndex = findTargetCustom(sum, currentPlayerIndex, customDirection);
+            
+            let resultText = `<strong>Dadi:</strong> ${dice.join(', ')}<br>`;
+            resultText += `<strong>Somma:</strong> ${sum}<br>`;
+            resultText += `<strong>Direzione:</strong> ${customDirection === 1 ? '⭮ Oraria' : '⭯ Antioraria'}<br><br>`;
+            
+            if (targetIndex === -1) {
+                resultText += `<strong style="color: #ffa500;">🎯 Nessun bersaglio valido</strong><br>`;
+                resultText += `<em>(Tutti i giocatori sono eliminati o sei l'ultimo rimasto)</em>`;
+            } else {
+                const target = gameState.players[targetIndex];
+                resultText += `<strong style="color: #00ff88;">🎯 BERSAGLIO: ${target.name}</strong><br>`;
+                resultText += `<em>HP attuali: ${target.hp}</em>`;
+            }
+            
+            document.getElementById('target-result-text').innerHTML = resultText;
+            document.getElementById('target-result-display').classList.remove('hidden');
+        }
+        
+        function findTargetCustom(sum, shooterIndex, customDirection) {
+            // Versione custom di findTarget con direzione personalizzata
+            const availableTargets = gameState.players
+                .map((player, index) => ({ player, index }))
+                .filter(({ player, index }) => !player.isEliminated && index !== shooterIndex);
+            
+            if (availableTargets.length === 0) return -1;
+            
+            if (customDirection === 1) {
+                // Senso orario: ordina per index crescente, partendo da dopo lo shooter
+                const after = availableTargets.filter(t => t.index > shooterIndex);
+                const before = availableTargets.filter(t => t.index < shooterIndex);
+                const ordered = [...after, ...before];
+                
+                const targetPosition = (sum - 1) % ordered.length;
+                return ordered[targetPosition].index;
+            } else {
+                // Senso antiorario: ordina per index decrescente, partendo da prima dello shooter
+                const before = availableTargets.filter(t => t.index < shooterIndex).reverse();
+                const after = availableTargets.filter(t => t.index > shooterIndex).reverse();
+                const ordered = [...before, ...after];
+                
+                const targetPosition = (sum - 1) % ordered.length;
+                return ordered[targetPosition].index;
+            }
+        }
+        
+        function clearPlayerEffects(playerIndex) {
+            // Pulisce tutti gli effetti quando un giocatore viene eliminato
+            const player = gameState.players[playerIndex];
+            
+            player.isImmortal = false;
+            player.multiplier = null;
+            player.multiplierAppliedBy = null;
+            player.skipTurn = false;
+            player.customDiceCount = null;
+            player.krakenMark = false;
+            player.checkmateHP = null;
+            player.damageToHeal = false;
+            player.sunArmor = false;
+            player.moonArmor = false;
+            player.reflectDamage = false;
+            player.boomerang = false;
+            player.boomerangDamageAccumulated = 0;
+            player.mirrorArmor = false;
+            
+            player.temporaryEffects = {
+                immortal: false,
+                multiplier: false,
+                skipTurn: false,
+                customDice: false,
+                damageToHeal: false,
+                sunArmor: false,
+                moonArmor: false,
+                reflectDamage: false,
+                boomerang: false,
+                mirrorArmor: false
+            };
         }
     </script>
 </body>
