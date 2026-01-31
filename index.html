@@ -1684,207 +1684,246 @@
             <!-- History -->
             <div class="history" id="history"></div>
 
+
             <!-- Master Controls -->
             <div id="master-controls" class="master-controls hidden">
                 <h3>👑 Controlli Master</h3>
                 
-                <div class="control-group">
+                <!-- Controlli Base (sempre visibili) -->
+                <div class="control-group" style="margin-bottom: 20px;">
                     <button id="reverse-direction-btn">🔄 Inverti Direzione</button>
                     <button id="rollback-btn">↩️ Annulla Ultima</button>
                 </div>
                 
-                <div class="input-group">
-                    <label>Mostra QR Code per Rientro</label>
-                    <select id="qr-player-select"></select>
-                    <button id="show-qr-btn">📱 Mostra QR Code</button>
-                </div>
-                
-                <div class="input-group">
-                    <label>Immortalità (seleziona uno o più giocatori - Ctrl/Cmd per multipli)</label>
-                    <select id="immortal-players" multiple size="5"></select>
-                    <button id="toggle-immortality-btn">⭐ Attiva/Disattiva Immortalità</button>
-                </div>
-                
-                <div class="input-group">
-                    <label>Moltiplicatore Danni/Cure (seleziona uno o più giocatori)</label>
-                    <select id="multiplier-players" multiple size="5"></select>
-                    <div class="hp-modifier">
-                        <button id="set-multiplier-half-btn" style="background: linear-gradient(135deg, #1a4d1a 0%, #2d7a2d 100%);">🛡️ Metà Danni (x0.5)</button>
-                        <button id="set-multiplier-double-btn" style="background: linear-gradient(135deg, #4d1a1a 0%, #7a2d2d 100%);">⚔️ Danni Doppi (x2)</button>
-                        <button id="remove-multiplier-btn" style="background: #dc3545;">❌ Rimuovi</button>
+                <!-- 🎮 EFFETTI GIOCATORI -->
+                <div class="master-section">
+                    <div class="master-section-header" onclick="toggleMasterSection(this)">
+                        <h4>⚔️ EFFETTI GIOCATORI</h4>
+                        <span class="master-section-toggle">▼</span>
                     </div>
-                    <div style="font-size: 0.85em; color: #aaa; margin-top: 8px; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 8px;">
-                        💡 Il moltiplicatore dura fino al prossimo turno di chi lo ha applicato
-                    </div>
-                </div>
-                
-                <div class="input-group">
-                    <label>Salta Turno (seleziona uno o più giocatori)</label>
-                    <select id="skip-turn-players" multiple size="5"></select>
-                    <button id="toggle-skip-turn-btn">⏭️ Attiva/Disattiva Salta Turno</button>
-                </div>
-                
-                <div class="input-group">
-                    <label>Marchio del Kraken 🐙 (seleziona uno o più giocatori)</label>
-                    <select id="kraken-mark-players" multiple size="5"></select>
-                    <button id="toggle-kraken-mark-btn" style="background: linear-gradient(135deg, #1a0033 0%, #330066 100%); border: 2px solid #9933ff;">🐙 Attiva/Disattiva Marchio</button>
-                    <div style="font-size: 0.85em; color: #ff6b6b; margin-top: 8px; padding: 8px; background: rgba(255,0,0,0.1); border-radius: 8px; border: 1px solid rgba(255,0,0,0.3);">
-                        ⚠️ <strong>Effetto permanente:</strong> Eliminazione automatica a 10 HP o meno
-                    </div>
-                </div>
-                
-                <div class="input-group">
-                    <label>Scacco Matto ♟️ (seleziona uno o più giocatori)</label>
-                    <select id="checkmate-players" multiple size="5"></select>
-                    <div class="hp-modifier">
-                        <input type="number" id="checkmate-value" placeholder="HP di eliminazione" min="1" max="100" value="30">
-                        <button id="set-checkmate-btn" style="background: linear-gradient(135deg, #1a0033 0%, #4d0000 100%); border: 2px solid #ff3333;">♟️ Imposta Scacco Matto</button>
-                        <button id="remove-checkmate-btn" style="background: #dc3545;">❌ Rimuovi</button>
-                    </div>
-                    <div style="font-size: 0.85em; color: #ff6b6b; margin-top: 8px; padding: 8px; background: rgba(255,0,0,0.1); border-radius: 8px; border: 1px solid rgba(255,0,0,0.3);">
-                        ⚠️ <strong>Effetto permanente:</strong> Eliminazione automatica al valore HP specificato
+                    <div class="master-section-content">
+                        
+                        <div class="input-group">
+                            <label>⭐ Immortalità</label>
+                            <select id="immortal-players" multiple size="4"></select>
+                            <button id="toggle-immortality-btn">⭐ Attiva/Disattiva</button>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>✨ Moltiplicatore Danni</label>
+                            <select id="multiplier-players" multiple size="4"></select>
+                            <div class="hp-modifier">
+                                <button id="set-multiplier-half-btn" style="background: linear-gradient(135deg, #1a4d1a 0%, #2d7a2d 100%);">🛡️ Metà (×0.5)</button>
+                                <button id="set-multiplier-double-btn" style="background: linear-gradient(135deg, #4d1a1a 0%, #7a2d2d 100%);">⚔️ Doppio (×2)</button>
+                                <button id="remove-multiplier-btn" style="background: #dc3545;">❌ Rimuovi</button>
+                            </div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>⏭️ Salta Turno</label>
+                            <select id="skip-turn-players" multiple size="4"></select>
+                            <button id="toggle-skip-turn-btn">⏭️ Attiva/Disattiva</button>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>🎲 Dadi Personalizzati</label>
+                            <select id="custom-dice-players" multiple size="4"></select>
+                            <div class="hp-modifier">
+                                <input type="number" id="custom-dice-value" placeholder="Numero dadi (1-6)" min="1" max="6" value="3">
+                                <button id="set-custom-dice-btn">🎲 Imposta</button>
+                                <button id="remove-custom-dice-btn" style="background: #dc3545;">❌ Rimuovi</button>
+                            </div>
+                        </div>
+                        
                     </div>
                 </div>
                 
-                <div class="input-group">
-                    <label>Conversione Danni → Cure 💫 (seleziona uno o più giocatori)</label>
-                    <select id="damage-to-heal-players" multiple size="5"></select>
-                    <button id="toggle-damage-to-heal-btn" style="background: linear-gradient(135deg, #ff1493 0%, #ff69b4 100%);">💫 Attiva/Disattiva Conversione</button>
-                    <div style="font-size: 0.85em; color: #ff69b4; margin-top: 8px; padding: 8px; background: rgba(255,20,147,0.1); border-radius: 8px;">
-                        💡 Dura 1 turno - I danni subiti diventano cure
+                <!-- 🛡️ ARMATURE & CONVERSIONI -->
+                <div class="master-section">
+                    <div class="master-section-header" onclick="toggleMasterSection(this)">
+                        <h4>🛡️ ARMATURE & CONVERSIONI</h4>
+                        <span class="master-section-toggle">▼</span>
+                    </div>
+                    <div class="master-section-content">
+                        
+                        <div class="input-group">
+                            <label>💫 Conversione Danni → Cure</label>
+                            <select id="damage-to-heal-players" multiple size="4"></select>
+                            <button id="toggle-damage-to-heal-btn" style="background: linear-gradient(135deg, #ff1493 0%, #ff69b4 100%);">💫 Attiva/Disattiva</button>
+                            <div style="font-size: 0.85em; color: #ff69b4; margin-top: 5px;">💡 Dura 1 turno</div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>☀️ Armatura del Sole (danni dispari→cure)</label>
+                            <select id="sun-armor-players" multiple size="4"></select>
+                            <button id="toggle-sun-armor-btn" style="background: linear-gradient(135deg, #ff8c00 0%, #ffd700 100%);">☀️ Attiva/Disattiva</button>
+                            <div style="font-size: 0.85em; color: #ffa500; margin-top: 5px;">💡 Dura 1 turno</div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>🌙 Armatura della Luna (danni pari→cure)</label>
+                            <select id="moon-armor-players" multiple size="4"></select>
+                            <button id="toggle-moon-armor-btn" style="background: linear-gradient(135deg, #191970 0%, #4169e1 100%);">🌙 Attiva/Disattiva</button>
+                            <div style="font-size: 0.85em; color: #87ceeb; margin-top: 5px;">💡 Dura 1 turno</div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>🛡️ Rifletti Danni</label>
+                            <select id="reflect-damage-players" multiple size="4"></select>
+                            <div style="margin: 8px 0;">
+                                <label style="display: inline-flex; align-items: center; cursor: pointer; color: #ff6b6b;">
+                                    <input type="checkbox" id="reflect-damage-temporary" style="margin-right: 8px;">
+                                    <span>Temporaneo (1 turno)</span>
+                                </label>
+                            </div>
+                            <button id="toggle-reflect-damage-btn" style="background: linear-gradient(135deg, #8b0000 0%, #dc143c 100%);">🛡️ Attiva/Disattiva</button>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>🪃 Boomerang (blocca danni 1 turno, poi redistribuisce)</label>
+                            <select id="boomerang-player"></select>
+                            <button id="activate-boomerang-btn" style="background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%);">🪃 Attiva</button>
+                            <div style="font-size: 0.85em; color: #e74c3c; margin-top: 5px;">💡 Dura 1 turno</div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>🪞 Armatura a Specchio (divide danno tra tutti)</label>
+                            <select id="mirror-armor-players" multiple size="4"></select>
+                            <button id="toggle-mirror-armor-btn" style="background: linear-gradient(135deg, #16a085 0%, #1abc9c 100%);">🪞 Attiva/Disattiva</button>
+                            <div style="font-size: 0.85em; color: #1abc9c; margin-top: 5px;">💡 Dura 1 turno</div>
+                        </div>
+                        
                     </div>
                 </div>
                 
-                <div class="input-group">
-                    <label>Armatura del Sole ☀️ (seleziona uno o più giocatori)</label>
-                    <select id="sun-armor-players" multiple size="5"></select>
-                    <button id="toggle-sun-armor-btn" style="background: linear-gradient(135deg, #ff8c00 0%, #ffd700 100%);">☀️ Attiva/Disattiva Armatura Sole</button>
-                    <div style="font-size: 0.85em; color: #ffa500; margin-top: 8px; padding: 8px; background: rgba(255,140,0,0.1); border-radius: 8px;">
-                        💡 Dura 1 turno - Danni dispari diventano cure
+                <!-- 🌊 EFFETTI GLOBALI -->
+                <div class="master-section">
+                    <div class="master-section-header" onclick="toggleMasterSection(this)">
+                        <h4>🌊 EFFETTI GLOBALI</h4>
+                        <span class="master-section-toggle">▼</span>
+                    </div>
+                    <div class="master-section-content">
+                        
+                        <div class="input-group">
+                            <label>🌊 Alta Marea</label>
+                            <div class="hp-modifier">
+                                <input type="number" id="high-tide-threshold" placeholder="Soglia HP" min="1" value="50">
+                                <button id="activate-high-tide-btn" style="background: linear-gradient(135deg, #006994 0%, #00b4d8 100%);">🌊 Attiva</button>
+                            </div>
+                            <div style="font-size: 0.85em; color: #00b4d8; margin-top: 5px;">
+                                💡 HP > soglia: ×2 | HP ≤ soglia: ×0.5 (dura 1 giro)
+                            </div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>⏰ Distorsione Temporale (partita finisce tra 3 turni)</label>
+                            <button id="activate-time-distortion-btn" style="background: linear-gradient(135deg, #4a0080 0%, #9b59b6 100%); border: 2px solid #e74c3c;">⏰ Attiva/Disattiva</button>
+                            <div style="font-size: 0.85em; color: #e74c3c; margin-top: 5px;">
+                                ⚠️ Fine se: 3 turni passati O chi l'ha attivata viene eliminato
+                            </div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>🦓 Zebratura (somme pari=cure, dispari=danni)</label>
+                            <button id="toggle-zebra-pattern-btn" style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); border: 2px solid #ecf0f1;">🦓 Attiva/Disattiva</button>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>🦠 Contagio (chi muore infligge danno a tutti - 1 volta)</label>
+                            <select id="contagion-exempt-player"></select>
+                            <button id="activate-contagion-btn" style="background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%); border: 2px solid #f39c12;">🦠 Attiva/Disattiva</button>
+                            <div style="font-size: 0.85em; color: #f39c12; margin-top: 5px;">
+                                💡 Seleziona giocatore ESENTE
+                            </div>
+                        </div>
+                        
                     </div>
                 </div>
                 
-                <div class="input-group">
-                    <label>Armatura della Luna 🌙 (seleziona uno o più giocatori)</label>
-                    <select id="moon-armor-players" multiple size="5"></select>
-                    <button id="toggle-moon-armor-btn" style="background: linear-gradient(135deg, #191970 0%, #4169e1 100%);">🌙 Attiva/Disattiva Armatura Luna</button>
-                    <div style="font-size: 0.85em; color: #87ceeb; margin-top: 8px; padding: 8px; background: rgba(25,25,112,0.2); border-radius: 8px;">
-                        💡 Dura 1 turno - Danni pari diventano cure
+                <!-- ☠️ ELIMINAZIONI -->
+                <div class="master-section">
+                    <div class="master-section-header" onclick="toggleMasterSection(this)">
+                        <h4>☠️ ELIMINAZIONI SPECIALI</h4>
+                        <span class="master-section-toggle">▼</span>
+                    </div>
+                    <div class="master-section-content">
+                        
+                        <div class="input-group">
+                            <label>🐙 Marchio del Kraken (elimina a ≤10 HP)</label>
+                            <select id="kraken-mark-players" multiple size="4"></select>
+                            <button id="toggle-kraken-mark-btn" style="background: linear-gradient(135deg, #1a0033 0%, #330066 100%); border: 2px solid #9933ff;">🐙 Attiva/Disattiva</button>
+                            <div style="font-size: 0.85em; color: #ff6b6b; margin-top: 5px;">
+                                ⚠️ Permanente
+                            </div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>♟️ Scacco Matto (elimina a HP esatto)</label>
+                            <select id="checkmate-players" multiple size="4"></select>
+                            <div class="hp-modifier">
+                                <input type="number" id="checkmate-value" placeholder="HP di eliminazione" min="1" max="100" value="30">
+                                <button id="set-checkmate-btn" style="background: linear-gradient(135deg, #1a0033 0%, #4d0000 100%); border: 2px solid #ff3333;">♟️ Imposta</button>
+                                <button id="remove-checkmate-btn" style="background: #dc3545;">❌ Rimuovi</button>
+                            </div>
+                            <div style="font-size: 0.85em; color: #ff6b6b; margin-top: 5px;">
+                                ⚠️ Permanente
+                            </div>
+                        </div>
+                        
                     </div>
                 </div>
                 
-                <div class="input-group">
-                    <label>🌊 Alta Marea (effetto globale per 1 turno)</label>
-                    <div class="hp-modifier">
-                        <input type="number" id="high-tide-threshold" placeholder="Soglia HP" min="1" value="50">
-                        <button id="activate-high-tide-btn" style="background: linear-gradient(135deg, #006994 0%, #00b4d8 100%);">🌊 Attiva Alta Marea</button>
+                <!-- 💚 GESTIONE HP & ALTRO -->
+                <div class="master-section">
+                    <div class="master-section-header" onclick="toggleMasterSection(this)">
+                        <h4>💚 GESTIONE HP & ALTRO</h4>
+                        <span class="master-section-toggle">▼</span>
                     </div>
-                    <div style="font-size: 0.85em; color: #00b4d8; margin-top: 8px; padding: 8px; background: rgba(0,180,216,0.15); border-radius: 8px;">
-                        💡 Dura 1 turno - HP > soglia: danni ×2 | HP ≤ soglia: danni ×0.5
-                    </div>
-                </div>
-                
-                <div class="input-group">
-                    <label>🛡️ Rifletti Danni (seleziona uno o più giocatori)</label>
-                    <select id="reflect-damage-players" multiple size="5"></select>
-                    <div style="margin: 8px 0;">
-                        <label style="display: inline-flex; align-items: center; cursor: pointer; color: #ff6b6b;">
-                            <input type="checkbox" id="reflect-damage-temporary" style="margin-right: 8px;">
-                            <span>Temporaneo (1 turno)</span>
-                        </label>
-                    </div>
-                    <button id="toggle-reflect-damage-btn" style="background: linear-gradient(135deg, #8b0000 0%, #dc143c 100%);">🛡️ Attiva/Disattiva Rifletti Danni</button>
-                    <div style="font-size: 0.85em; color: #ff6b6b; margin-top: 8px; padding: 8px; background: rgba(220,20,60,0.15); border-radius: 8px;">
-                        💡 Chi attacca subisce gli stessi danni
-                    </div>
-                </div>
-                
-                <div class="input-group">
-                    <label>⏰ Distorsione Temporale (effetto globale)</label>
-                    <button id="activate-time-distortion-btn" style="background: linear-gradient(135deg, #4a0080 0%, #9b59b6 100%); border: 2px solid #e74c3c;">⏰ Attiva Distorsione</button>
-                    <div style="font-size: 0.85em; color: #e74c3c; margin-top: 8px; padding: 8px; background: rgba(231,76,60,0.15); border-radius: 8px;">
-                        ⚠️ <strong>Partita finisce tra 3 turni!</strong> Se un giocatore perde tutti gli HP prima, vince chi ne ha di più
-                    </div>
-                </div>
-                
-                <div class="input-group">
-                    <label>🪃 Boomerang (seleziona un giocatore)</label>
-                    <select id="boomerang-player"></select>
-                    <button id="activate-boomerang-btn" style="background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%);">🪃 Attiva Boomerang</button>
-                    <div style="font-size: 0.85em; color: #e74c3c; margin-top: 8px; padding: 8px; background: rgba(231,76,60,0.15); border-radius: 8px;">
-                        💡 Dura 1 turno - Non subisce danni e li distribuisce a tutti gli altri
-                    </div>
-                </div>
-                
-                <div class="input-group">
-                    <label>🦓 Zebratura (effetto globale)</label>
-                    <button id="toggle-zebra-pattern-btn" style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); border: 2px solid #ecf0f1;">🦓 Attiva/Disattiva Zebratura</button>
-                    <div style="font-size: 0.85em; color: #ecf0f1; margin-top: 8px; padding: 8px; background: rgba(44,62,80,0.3); border-radius: 8px;">
-                        💡 Somme pari curano, somme dispari danneggiano
-                    </div>
-                </div>
-                
-                <div class="input-group">
-                    <label>🪞 Armatura a Specchio (seleziona uno o più giocatori)</label>
-                    <select id="mirror-armor-players" multiple size="5"></select>
-                    <button id="toggle-mirror-armor-btn" style="background: linear-gradient(135deg, #16a085 0%, #1abc9c 100%);">🪞 Attiva/Disattiva Armatura Specchio</button>
-                    <div style="font-size: 0.85em; color: #1abc9c; margin-top: 8px; padding: 8px; background: rgba(26,188,156,0.15); border-radius: 8px;">
-                        💡 Dura 1 turno - Il danno viene diviso tra tutti i giocatori vivi
+                    <div class="master-section-content">
+                        
+                        <div class="input-group">
+                            <label>📱 Mostra QR Code</label>
+                            <select id="qr-player-select"></select>
+                            <button id="show-qr-btn">📱 Mostra QR Code</button>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>💥 Danno / 💚 Cura Giocatori</label>
+                            <select id="target-players" multiple size="4"></select>
+                            <div class="hp-modifier">
+                                <input type="number" id="hp-amount" placeholder="Valore HP">
+                                <button id="damage-btn">💥 Danno</button>
+                                <button id="heal-btn">💚 Cura</button>
+                            </div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>🔄 Rianimazione</label>
+                            <button id="revive-btn">🔄 Rianimazione</button>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>🔄 Scambia HP tra Giocatori</label>
+                            <select id="swap-player-1"></select>
+                            <select id="swap-player-2" style="margin-top: 10px;"></select>
+                            <button id="swap-hp-btn">🔄 Scambia HP</button>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>⏭️ Cambia Turno</label>
+                            <select id="next-turn-player"></select>
+                            <button id="change-turn-btn">⏭️ Cambia Turno</button>
+                        </div>
+                        
+                        <div class="input-group">
+                            <button id="end-game-btn" style="background: #dc3545;">🏁 Termina Partita</button>
+                            <button id="new-game-btn" style="background: linear-gradient(135deg, #4ecca3 0%, #3ab795 100%);">🎮 Nuova Partita</button>
+                        </div>
+                        
                     </div>
                 </div>
                 
-                <div class="input-group">
-                    <label>🦠 Contagio (seleziona giocatore ESENTE)</label>
-                    <select id="contagion-exempt-player"></select>
-                    <button id="activate-contagion-btn" style="background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%); border: 2px solid #f39c12;">🦠 Attiva Contagio</button>
-                    <div style="font-size: 0.85em; color: #f39c12; margin-top: 8px; padding: 8px; background: rgba(243,156,18,0.15); border-radius: 8px;">
-                        💡 Permanente - Chi viene eliminato infligge i suoi HP persi a tutti (tranne esente)
-                    </div>
-                </div>
-                
-                <div class="input-group">
-                    <label>Dadi Personalizzati (seleziona uno o più giocatori)</label>
-                    <select id="custom-dice-players" multiple size="5"></select>
-                    <div class="hp-modifier">
-                        <input type="number" id="custom-dice-value" placeholder="Numero dadi (1-6)" min="1" max="6" value="3">
-                        <button id="set-custom-dice-btn">🎲 Imposta Dadi</button>
-                        <button id="remove-custom-dice-btn" style="background: #dc3545;">❌ Rimuovi</button>
-                    </div>
-                    <div style="font-size: 0.85em; color: #aaa; margin-top: 8px; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 8px;">
-                        💡 I dadi personalizzati durano solo per il prossimo turno del giocatore
-                    </div>
-                </div>
-
-                <div class="input-group">
-                    <label>Cambia Turno</label>
-                    <select id="next-turn-player"></select>
-                    <button id="change-turn-btn">⏭️ Cambia Turno</button>
-                </div>
-
-                <div class="input-group">
-                    <label>Modifica HP Giocatori (tieni premuto Ctrl/Cmd per selezionare multipli)</label>
-                    <select id="target-players" multiple size="5"></select>
-                    <div class="hp-modifier">
-                        <input type="number" id="hp-amount" placeholder="Valore HP">
-                        <button id="damage-btn">💥 Danno</button>
-                        <button id="heal-btn">💚 Cura</button>
-                    </div>
-                </div>
-
-                <button id="revive-btn">🔄 Rianimazione</button>
-                
-                <div class="input-group" style="margin-top: 15px;">
-                    <label>Scambia HP tra Giocatori</label>
-                    <select id="swap-player-1"></select>
-                    <select id="swap-player-2" style="margin-top: 10px;"></select>
-                    <button id="swap-hp-btn">🔄 Scambia HP</button>
-                </div>
-                
-                <button id="end-game-btn" style="background: #dc3545;">🏁 Termina Partita</button>
-                <button id="new-game-btn" style="background: linear-gradient(135deg, #4ecca3 0%, #3ab795 100%);">🎮 Nuova Partita</button>
             </div>
-        </div>
-    </div>
 
     <!-- QR Code Modal -->
     <div id="qr-modal" class="qr-modal">
@@ -3113,7 +3152,7 @@
 
             // Apply damage
             if (target) {
-                // Calculate multipliers first
+                // ===== CALCOLA MOLTIPLICATORI UNA SOLA VOLTA =====
                 let multiplier = target.multiplier || 1;
                 
                 // Apply High Tide effect if active
@@ -3125,11 +3164,12 @@
                     }
                 }
                 
-                const damageAfterMultipliers = Math.ceil(result.damage * multiplier);
+                const actualDamage = Math.ceil(result.damage * multiplier);
+                // ===== FINE CALCOLO MOLTIPLICATORI =====
                 
-                // BOOMERANG: Accumula danno DOPO tutti i moltiplicatori, verrà redistribuito all'inizio del suo turno
+                // PRIORITÀ 1: BOOMERANG - Blocca tutto e accumula
                 if (target.boomerang) {
-                    target.boomerangDamageAccumulated += damageAfterMultipliers;
+                    target.boomerangDamageAccumulated += actualDamage;
                     
                     if (gameState.highTideActive && gameState.highTideThreshold) {
                         if (target.hp > gameState.highTideThreshold) {
@@ -3151,12 +3191,12 @@
                     // NO DAMAGE DEALT = NO SELF HEAL for Tris
                     actualDamageDealt = 0;
                 }
-                // Check if target is immortal
+                // PRIORITÀ 2: IMMORTALITÀ - Blocca tutto
                 else if (target.isImmortal) {
                     // Immortal player takes no damage
                     gameState.history.push(`⭐ ${target.name} è immortale e non subisce danni!`);
-                    animateHP(result.targetIndex, 0, 'immortal'); // Animazione immortalità!
-                    playSound('heal'); // Suono positivo per indicare l'immortalità
+                    animateHP(result.targetIndex, 0, 'immortal');
+                    playSound('heal');
                     
                     // Visual effect for immortal player
                     if (target.name === gameState.playerName) {
@@ -3167,6 +3207,8 @@
                     // NO DAMAGE DEALT = NO SELF HEAL for Tris
                     actualDamageDealt = 0;
                 } else {
+                    // PRIORITÀ 3+: Applica danno normale (con conversioni, armature, ecc.)
+                    
                     // Initialize stats for target if not exists
                     if (!gameState.stats[target.name]) {
                         gameState.stats[target.name] = {
@@ -3178,25 +3220,25 @@
                         };
                     }
                     
-                    // Apply multiplier to damage
-                    let multiplier = target.multiplier || 1;
-                    
-                    // Apply High Tide effect if active
+                    // Log Alta Marea effect
                     if (gameState.highTideActive && gameState.highTideThreshold) {
                         if (target.hp > gameState.highTideThreshold) {
-                            // Above threshold: double damage
-                            multiplier *= 2;
                             gameState.history.push(`🌊 Alta Marea: ${target.name} (${target.hp} HP > ${gameState.highTideThreshold}) subisce danni ×2`);
                         } else {
-                            // Below or equal threshold: half damage
-                            multiplier *= 0.5;
                             gameState.history.push(`🌊 Alta Marea: ${target.name} (${target.hp} HP ≤ ${gameState.highTideThreshold}) subisce danni ×0.5`);
                         }
                     }
                     
-                    const actualDamage = Math.ceil(result.damage * multiplier); // Arrotonda per eccesso
-                    
                     const wasAlive = !target.isEliminated;
+                    
+                    /*
+                     * ===== PRIORITÀ CONVERSIONI/ARMATURE =====
+                     * 1. Zebratura (somma pari/dispari) - PRIORITÀ MASSIMA
+                     * 2. Conversione Danni→Cure (💫) - converte TUTTO
+                     * 3. Armatura del Sole (☀️) - solo danni DISPARI
+                     * 4. Armatura della Luna (🌙) - solo danni PARI
+                     * Se nessuna conversione: danno normale
+                     */
                     
                     // ZEBRATURA: Inverti danno e cura in base alla somma pari/dispari
                     let zebraturaActive = gameState.zebraPatternActive;
@@ -4652,101 +4694,84 @@
             const player = gameState.players[playerIndex];
             if (!player || !player.temporaryEffects) return;
             
-            // NUOVA LOGICA: Gli effetti temporanei durano fino al prossimo turno del MASTER
-            // Reset solo se il giocatore che ha appena giocato è il master
-            if (!player.isMaster) {
-                // Non è il master, non resettiamo niente
-                return;
+            // LOGICA CORRETTA: Gli effetti temporanei durano 1 turno del giocatore che li ha
+            // Reset gli effetti del giocatore che ha appena giocato
+            
+            let playerResetMessages = [];
+            
+            // Reset immortality if temporary
+            if (player.temporaryEffects.immortal && player.isImmortal) {
+                player.isImmortal = false;
+                playerResetMessages.push('⭐ immortalità');
             }
             
-            // È il master! Resettiamo TUTTI gli effetti temporanei di TUTTI i giocatori
-            let resetMessages = [];
+            // Reset multipliers if temporary
+            if (player.temporaryEffects.multiplier && player.multiplier !== null) {
+                player.multiplier = null;
+                player.multiplierAppliedBy = null;
+                playerResetMessages.push('✨ moltiplicatore');
+            }
             
-            gameState.players.forEach((p, index) => {
-                let playerResetMessages = [];
-                
-                // Reset immortality if temporary
-                if (p.temporaryEffects.immortal && p.isImmortal) {
-                    p.isImmortal = false;
-                    playerResetMessages.push('⭐ immortalità');
-                }
-                
-                // Reset multipliers if temporary
-                if (p.temporaryEffects.multiplier && p.multiplier !== null) {
-                    p.multiplier = null;
-                    p.multiplierAppliedBy = null;
-                    playerResetMessages.push('✨ moltiplicatore');
-                }
-                
-                // Reset custom dice if temporary
-                if (p.temporaryEffects.customDice && p.customDiceCount) {
-                    p.customDiceCount = null;
-                    playerResetMessages.push('🎲 dadi personalizzati');
-                }
-                
-                // Reset damage-to-heal if temporary
-                if (p.temporaryEffects.damageToHeal && p.damageToHeal) {
-                    p.damageToHeal = false;
-                    playerResetMessages.push('💫 conversione danni→cure');
-                }
-                
-                // Reset sun armor if temporary
-                if (p.temporaryEffects.sunArmor && p.sunArmor) {
-                    p.sunArmor = false;
-                    playerResetMessages.push('☀️ armatura del sole');
-                }
-                
-                // Reset moon armor if temporary
-                if (p.temporaryEffects.moonArmor && p.moonArmor) {
-                    p.moonArmor = false;
-                    playerResetMessages.push('🌙 armatura della luna');
-                }
-                
-                // Reset reflect damage if temporary
-                if (p.temporaryEffects.reflectDamage && p.reflectDamage) {
-                    p.reflectDamage = false;
-                    playerResetMessages.push('🛡️ rifletti danni');
-                }
-                
-                // Reset boomerang if temporary
-                if (p.temporaryEffects.boomerang && p.boomerang) {
-                    p.boomerang = false;
-                    p.boomerangDamageAccumulated = 0;
-                    playerResetMessages.push('🪃 boomerang');
-                }
-                
-                // Reset mirror armor if temporary
-                if (p.temporaryEffects.mirrorArmor && p.mirrorArmor) {
-                    p.mirrorArmor = false;
-                    playerResetMessages.push('🪞 armatura a specchio');
-                }
-                
-                // Clear ALL temporary flags for this player
-                p.temporaryEffects = {
-                    immortal: false,
-                    multiplier: false,
-                    skipTurn: p.temporaryEffects.skipTurn, // Mantieni skipTurn
-                    customDice: false,
-                    damageToHeal: false,
-                    sunArmor: false,
-                    moonArmor: false,
-                    reflectDamage: false,
-                    boomerang: false,
-                    mirrorArmor: false
-                };
-                
-                // Add to reset messages if this player had effects reset
-                if (playerResetMessages.length > 0) {
-                    resetMessages.push(`${p.name}: ${playerResetMessages.join(', ')}`);
-                }
-            });
+            // Reset custom dice if temporary
+            if (player.temporaryEffects.customDice && player.customDiceCount) {
+                player.customDiceCount = null;
+                playerResetMessages.push('🎲 dadi personalizzati');
+            }
             
-            // Add history message if something was reset
-            if (resetMessages.length > 0) {
-                gameState.history.push(`⏱️ Fine turno Master - Effetti temporanei rimossi:`);
-                resetMessages.forEach(msg => {
-                    gameState.history.push(`   • ${msg}`);
-                });
+            // Reset damage-to-heal if temporary
+            if (player.temporaryEffects.damageToHeal && player.damageToHeal) {
+                player.damageToHeal = false;
+                playerResetMessages.push('💫 conversione danni→cure');
+            }
+            
+            // Reset sun armor if temporary
+            if (player.temporaryEffects.sunArmor && player.sunArmor) {
+                player.sunArmor = false;
+                playerResetMessages.push('☀️ armatura del sole');
+            }
+            
+            // Reset moon armor if temporary
+            if (player.temporaryEffects.moonArmor && player.moonArmor) {
+                player.moonArmor = false;
+                playerResetMessages.push('🌙 armatura della luna');
+            }
+            
+            // Reset reflect damage if temporary
+            if (player.temporaryEffects.reflectDamage && player.reflectDamage) {
+                player.reflectDamage = false;
+                playerResetMessages.push('🛡️ rifletti danni');
+            }
+            
+            // Reset boomerang if temporary
+            if (player.temporaryEffects.boomerang && player.boomerang) {
+                player.boomerang = false;
+                player.boomerangDamageAccumulated = 0;
+                playerResetMessages.push('🪃 boomerang');
+            }
+            
+            // Reset mirror armor if temporary
+            if (player.temporaryEffects.mirrorArmor && player.mirrorArmor) {
+                player.mirrorArmor = false;
+                playerResetMessages.push('🪞 armatura a specchio');
+            }
+            
+            // Clear ALL temporary flags for this player
+            player.temporaryEffects = {
+                immortal: false,
+                multiplier: false,
+                skipTurn: player.temporaryEffects.skipTurn, // Mantieni skipTurn
+                customDice: false,
+                damageToHeal: false,
+                sunArmor: false,
+                moonArmor: false,
+                reflectDamage: false,
+                boomerang: false,
+                mirrorArmor: false
+            };
+            
+            // Add to history if something was reset
+            if (playerResetMessages.length > 0) {
+                gameState.history.push(`⏱️ ${player.name}: effetti temporanei terminati (${playerResetMessages.join(', ')})`);
             }
         }
         
@@ -5192,6 +5217,11 @@
             }
         }
         
+        function toggleMasterSection(header) {
+            const section = header.parentElement;
+            section.classList.toggle('collapsed');
+        }
+
         function clearPlayerEffects(playerIndex) {
             // Pulisce tutti gli effetti quando un giocatore viene eliminato
             const player = gameState.players[playerIndex];
